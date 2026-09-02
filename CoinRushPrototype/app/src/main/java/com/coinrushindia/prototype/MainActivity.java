@@ -3,14 +3,13 @@ package com.coinrushindia.prototype;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
-import android.view.animation.ScaleAnimation;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -18,666 +17,409 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.FullScreenContentCallback;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.interstitial.InterstitialAd;
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
-import com.google.android.gms.ads.rewarded.RewardedAd;
-import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
-
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
 public class MainActivity extends Activity {
 
-    // =====================================================
-    // ACCOUNT STORAGE
-    // =====================================================
-
-    private static final String PREFS =
-            "CoinRushIndiaPrefs";
-
-    private static final String KEY_USERNAME =
-            "username";
-
-    private static final String KEY_PASSWORD =
-            "password";
-
-    private static final String KEY_LOGGED_IN =
-            "logged_in";
-
-    private static final String KEY_BEST_SCORE =
-            "best_score";
-
-    private static final String KEY_TOTAL_COINS =
-            "total_coins";
+    // =========================
+    // ACCOUNT DATA
+    // =========================
 
     private SharedPreferences prefs;
 
-    // =====================================================
-    // LIVE ADMOB IDS
-    // =====================================================
+    private String username = "";
 
-    private static final String INTERSTITIAL_AD_ID =
-            "ca-app-pub-459015901387755/9228973931";
+    // =========================
+    // GAME DATA
+    // =========================
 
-    private static final String REWARDED_AD_ID =
-            "ca-app-pub-459015901387755/5227139421";
-
-    private InterstitialAd interstitialAd;
-    private RewardedAd rewardedAd;
-
-    // =====================================================
-    // GAME VARIABLES
-    // =====================================================
-
-    private int score = 0;
+    private int coins = 0;
     private int bestScore = 0;
     private int totalCoins = 0;
+    private int timeLeft = 30;
 
-    private CountDownTimer gameTimer;
+    private CountDownTimer timer;
 
-    // =====================================================
-    // UI
-    // =====================================================
+    // =========================
+    // GAME VIEWS
+    // =========================
 
     private TextView scoreText;
+    private TextView bestText;
+    private TextView totalText;
     private TextView timerText;
     private TextView messageText;
-    private TextView bestText;
-    private TextView totalCoinsText;
 
-    private Button coinButton;
+    private Button tapButton;
     private Button rewardButton;
     private Button restartButton;
+    private Button logoutButton;
 
-    // =====================================================
+
+    // =========================
     // COLORS
-    // =====================================================
+    // =========================
 
-    private static final int BG =
-            Color.rgb(13, 16, 27);
+    private final int BG = Color.rgb(12, 18, 28);
+    private final int CARD = Color.rgb(25, 34, 48);
+    private final int WHITE = Color.WHITE;
+    private final int GREEN = Color.rgb(45, 190, 100);
+    private final int ORANGE = Color.rgb(255, 145, 45);
+    private final int RED = Color.rgb(230, 70, 70);
+    private final int GRAY = Color.rgb(150, 160, 175);
 
-    private static final int CARD =
-            Color.rgb(29, 34, 48);
 
-    private static final int INPUT =
-            Color.rgb(40, 45, 60);
-
-    private static final int WHITE =
-            Color.WHITE;
-
-    private static final int GREY =
-            Color.rgb(185, 190, 205);
-
-    private static final int ORANGE =
-            Color.rgb(255, 152, 0);
-
-    private static final int GREEN =
-            Color.rgb(42, 190, 105);
-
-    private static final int DARK =
-            Color.rgb(68, 74, 90);
-
-    // =====================================================
+    // =========================
     // ON CREATE
-    // =====================================================
+    // =========================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getWindow().setStatusBarColor(BG);
-        getWindow().setNavigationBarColor(Color.BLACK);
+        prefs = getSharedPreferences("CoinRushIndia", MODE_PRIVATE);
 
-        prefs = getSharedPreferences(
-                PREFS,
-                MODE_PRIVATE
-        );
+        username = prefs.getString("username", "");
+        bestScore = prefs.getInt("bestScore", 0);
+        totalCoins = prefs.getInt("totalCoins", 0);
 
-        bestScore = prefs.getInt(
-                KEY_BEST_SCORE,
-                0
-        );
+        if (prefs.getBoolean("loggedIn", false)
+                && !username.isEmpty()) {
 
-        totalCoins = prefs.getInt(
-                KEY_TOTAL_COINS,
-                0
-        );
-
-        // Start AdMob
-        MobileAds.initialize(
-                this,
-                initializationStatus -> {
-                    loadInterstitial();
-                    loadRewarded();
-                }
-        );
-
-        if (prefs.getBoolean(
-                KEY_LOGGED_IN,
-                false
-        )) {
-
-            showGame();
+            showGameScreen();
 
         } else {
 
-            showLogin();
+            showLoginScreen();
         }
     }
 
-    // =====================================================
-    // LOGIN
-    // =====================================================
 
-    private void showLogin() {
+    // =========================================================
+    // LOGIN SCREEN
+    // =========================================================
 
-        ScrollView scroll =
-                new ScrollView(this);
+    private void showLoginScreen() {
 
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(BG);
+        LinearLayout root = createRoot();
 
-        LinearLayout root = root();
-
-        TextView title = text(
+        TextView title = createText(
                 "🇮🇳 Coin Rush India",
                 30,
-                WHITE
+                WHITE,
+                true
         );
 
-        title.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
+        root.addView(title);
 
-        title.setGravity(Gravity.CENTER);
-
-        root.addView(
-                title,
-                lp(
-                        MATCH,
-                        dp(65)
-                )
-        );
-
-        TextView subtitle = text(
+        TextView subtitle = createText(
                 "LOGIN TO PLAY",
-                17,
-                GREY
+                15,
+                GRAY,
+                true
         );
 
-        subtitle.setGravity(
-                Gravity.CENTER
+        LinearLayout.LayoutParams subParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        -2
+                );
+
+        subParams.setMargins(0, 10, 0, 30);
+        subtitle.setLayoutParams(subParams);
+
+        root.addView(subtitle);
+
+
+        EditText usernameInput = createInput("Username");
+
+        root.addView(usernameInput);
+
+
+        EditText passwordInput = createInput("Password");
+        passwordInput.setInputType(
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
 
-        root.addView(
-                subtitle,
-                lp(
-                        MATCH,
-                        dp(40)
-                )
-        );
+        root.addView(passwordInput);
 
-        addSpace(root, 12);
 
-        LinearLayout card = card();
-
-        TextView heading = text(
-                "Welcome Back 👋",
-                25,
-                WHITE
-        );
-
-        heading.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        heading.setGravity(
-                Gravity.CENTER
-        );
-
-        card.addView(
-                heading,
-                lp(
-                        MATCH,
-                        dp(50)
-                )
-        );
-
-        addSpace(card, 12);
-
-        EditText username =
-                input("Username");
-
-        card.addView(
-                username,
-                lp(
-                        MATCH,
-                        dp(52)
-                )
-        );
-
-        addSpace(card, 12);
-
-        EditText password =
-                input("Password");
-
-        password.setInputType(
-                InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
-
-        card.addView(
-                password,
-                lp(
-                        MATCH,
-                        dp(52)
-                )
-        );
-
-        addSpace(card, 18);
-
-        Button login = button(
-                "🔐  LOGIN",
+        Button loginButton = createButton(
+                "LOGIN",
                 GREEN
         );
 
-        card.addView(
-                login,
-                lp(
-                        MATCH,
-                        dp(54)
-                )
-        );
+        root.addView(loginButton);
 
-        addSpace(card, 12);
 
-        Button signup = button(
-                "📝  CREATE ACCOUNT",
+        Button signupButton = createButton(
+                "CREATE NEW ACCOUNT",
                 ORANGE
         );
 
-        card.addView(
-                signup,
-                lp(
-                        MATCH,
-                        dp(54)
-                )
-        );
+        root.addView(signupButton);
 
-        addSpace(card, 12);
 
-        TextView info = text(
-                "Your account is saved on this device.",
-                13,
-                GREY
-        );
-
-        info.setGravity(
-                Gravity.CENTER
-        );
-
-        card.addView(
-                info,
-                lp(
-                        MATCH,
-                        dp(35)
-                )
-        );
-
-        root.addView(
-                card,
-                lp(
-                        MATCH,
-                        WRAP
-                )
-        );
-
-        scroll.addView(root);
-
-        login.setOnClickListener(v -> {
+        loginButton.setOnClickListener(v -> {
 
             String user =
-                    username.getText()
-                            .toString()
-                            .trim();
+                    usernameInput.getText().toString().trim();
 
             String pass =
-                    password.getText()
-                            .toString();
+                    passwordInput.getText().toString();
 
-            if (user.isEmpty() ||
-                    pass.isEmpty()) {
+            if (user.isEmpty() || pass.isEmpty()) {
 
-                toast(
-                        "Username aur password enter karein"
-                );
+                Toast.makeText(
+                        this,
+                        "Username aur password bharo",
+                        Toast.LENGTH_SHORT
+                ).show();
 
                 return;
             }
 
+
             String savedUser =
-                    prefs.getString(
-                            KEY_USERNAME,
-                            ""
-                    );
+                    prefs.getString("username", "");
 
-            String savedPass =
-                    prefs.getString(
-                            KEY_PASSWORD,
-                            ""
-                    );
+            String savedPassword =
+                    prefs.getString("password", "");
 
-            if (user.equals(savedUser)
-                    && hash(pass).equals(savedPass)) {
+
+            if (savedUser.isEmpty()) {
+
+                Toast.makeText(
+                        this,
+                        "Pehle account create karo",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
+
+            if (savedUser.equals(user)
+                    && savedPassword.equals(hashPassword(pass))) {
 
                 prefs.edit()
-                        .putBoolean(
-                                KEY_LOGGED_IN,
-                                true
-                        )
+                        .putBoolean("loggedIn", true)
                         .apply();
 
-                toast(
-                        "Login successful! 🎮"
-                );
+                username = user;
 
-                showGame();
+                showGameScreen();
 
             } else {
 
-                toast(
-                        "Username ya password galat hai"
-                );
+                Toast.makeText(
+                        this,
+                        "Username ya password galat hai",
+                        Toast.LENGTH_SHORT
+                ).show();
             }
         });
 
-        signup.setOnClickListener(
-                v -> showSignup()
+
+        signupButton.setOnClickListener(v ->
+                showSignupScreen()
         );
 
-        setContentView(scroll);
+
+        setContentView(wrapScroll(root));
     }
 
-    // =====================================================
-    // SIGNUP
-    // =====================================================
 
-    private void showSignup() {
+    // =========================================================
+    // SIGNUP SCREEN
+    // =========================================================
 
-        ScrollView scroll =
-                new ScrollView(this);
+    private void showSignupScreen() {
 
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(BG);
+        LinearLayout root = createRoot();
 
-        LinearLayout root = root();
-
-        TextView title = text(
-                "🇮🇳 Coin Rush India",
-                30,
-                WHITE
+        TextView title = createText(
+                "🇮🇳 Create Account",
+                28,
+                WHITE,
+                true
         );
 
-        title.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
+        root.addView(title);
+
+
+        TextView info = createText(
+                "Create your Coin Rush India account",
+                15,
+                GRAY,
+                false
         );
 
-        title.setGravity(
-                Gravity.CENTER
+        LinearLayout.LayoutParams infoParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        -2
+                );
+
+        infoParams.setMargins(0, 10, 0, 30);
+
+        info.setLayoutParams(infoParams);
+
+        root.addView(info);
+
+
+        EditText usernameInput =
+                createInput("Choose Username");
+
+        root.addView(usernameInput);
+
+
+        EditText passwordInput =
+                createInput("Choose Password");
+
+        passwordInput.setInputType(
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
 
-        root.addView(
-                title,
-                lp(
-                        MATCH,
-                        dp(65)
-                )
+        root.addView(passwordInput);
+
+
+        EditText confirmInput =
+                createInput("Confirm Password");
+
+        confirmInput.setInputType(
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
 
-        TextView subtitle = text(
-                "CREATE YOUR ACCOUNT",
-                17,
-                GREY
-        );
+        root.addView(confirmInput);
 
-        subtitle.setGravity(
-                Gravity.CENTER
-        );
 
-        root.addView(
-                subtitle,
-                lp(
-                        MATCH,
-                        dp(40)
-                )
-        );
+        Button createButton =
+                createButton(
+                        "CREATE ACCOUNT",
+                        GREEN
+                );
 
-        addSpace(root, 12);
+        root.addView(createButton);
 
-        LinearLayout card = card();
 
-        TextView heading = text(
-                "Join Coin Rush 🚀",
-                25,
-                WHITE
-        );
+        Button backButton =
+                createButton(
+                        "BACK TO LOGIN",
+                        CARD
+                );
 
-        heading.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
+        root.addView(backButton);
 
-        heading.setGravity(
-                Gravity.CENTER
-        );
 
-        card.addView(
-                heading,
-                lp(
-                        MATCH,
-                        dp(50)
-                )
-        );
-
-        addSpace(card, 12);
-
-        EditText username =
-                input("Choose Username");
-
-        card.addView(
-                username,
-                lp(
-                        MATCH,
-                        dp(52)
-                )
-        );
-
-        addSpace(card, 12);
-
-        EditText password =
-                input("Choose Password");
-
-        password.setInputType(
-                InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
-
-        card.addView(
-                password,
-                lp(
-                        MATCH,
-                        dp(52)
-                )
-        );
-
-        addSpace(card, 12);
-
-        EditText confirm =
-                input("Confirm Password");
-
-        confirm.setInputType(
-                InputType.TYPE_CLASS_TEXT |
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
-
-        card.addView(
-                confirm,
-                lp(
-                        MATCH,
-                        dp(52)
-                )
-        );
-
-        addSpace(card, 18);
-
-        Button create = button(
-                "🚀  CREATE ACCOUNT",
-                GREEN
-        );
-
-        card.addView(
-                create,
-                lp(
-                        MATCH,
-                        dp(54)
-                )
-        );
-
-        addSpace(card, 12);
-
-        Button back = button(
-                "←  BACK TO LOGIN",
-                DARK
-        );
-
-        card.addView(
-                back,
-                lp(
-                        MATCH,
-                        dp(52)
-                )
-        );
-
-        root.addView(
-                card,
-                lp(
-                        MATCH,
-                        WRAP
-                )
-        );
-
-        scroll.addView(root);
-
-        create.setOnClickListener(v -> {
+        createButton.setOnClickListener(v -> {
 
             String user =
-                    username.getText()
-                            .toString()
-                            .trim();
+                    usernameInput.getText().toString().trim();
 
             String pass =
-                    password.getText()
-                            .toString();
+                    passwordInput.getText().toString();
 
-            String confirmPass =
-                    confirm.getText()
-                            .toString();
+            String confirm =
+                    confirmInput.getText().toString();
+
+
+            if (user.isEmpty()
+                    || pass.isEmpty()
+                    || confirm.isEmpty()) {
+
+                Toast.makeText(
+                        this,
+                        "Sabhi details bharo",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
 
             if (user.length() < 3) {
 
-                toast(
-                        "Username minimum 3 characters ka ho"
-                );
+                Toast.makeText(
+                        this,
+                        "Username kam se kam 3 characters ka ho",
+                        Toast.LENGTH_SHORT
+                ).show();
 
                 return;
             }
+
 
             if (pass.length() < 4) {
 
-                toast(
-                        "Password minimum 4 characters ka ho"
-                );
+                Toast.makeText(
+                        this,
+                        "Password kam se kam 4 characters ka ho",
+                        Toast.LENGTH_SHORT
+                ).show();
 
                 return;
             }
 
-            if (!pass.equals(confirmPass)) {
 
-                toast(
-                        "Passwords match nahi kar rahe"
-                );
+            if (!pass.equals(confirm)) {
 
-                return;
-            }
-
-            if (prefs.contains(KEY_USERNAME)) {
-
-                toast(
-                        "Is device par account already bana hai"
-                );
+                Toast.makeText(
+                        this,
+                        "Passwords match nahi kar rahe",
+                        Toast.LENGTH_SHORT
+                ).show();
 
                 return;
             }
+
 
             prefs.edit()
-                    .putString(
-                            KEY_USERNAME,
-                            user
-                    )
-                    .putString(
-                            KEY_PASSWORD,
-                            hash(pass)
-                    )
-                    .putBoolean(
-                            KEY_LOGGED_IN,
-                            true
-                    )
-                    .putInt(
-                            KEY_BEST_SCORE,
-                            0
-                    )
-                    .putInt(
-                            KEY_TOTAL_COINS,
-                            0
-                    )
+                    .putString("username", user)
+                    .putString("password", hashPassword(pass))
+                    .putInt("bestScore", 0)
+                    .putInt("totalCoins", 0)
+                    .putBoolean("loggedIn", true)
                     .apply();
 
+
+            username = user;
             bestScore = 0;
             totalCoins = 0;
 
-            toast(
-                    "Account created! 🎉"
-            );
 
-            showGame();
+            Toast.makeText(
+                    this,
+                    "Account created!",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+
+            showGameScreen();
         });
 
-        back.setOnClickListener(
-                v -> showLogin()
+
+        backButton.setOnClickListener(v ->
+                showLoginScreen()
         );
 
-        setContentView(scroll);
+
+        setContentView(wrapScroll(root));
     }
 
-    // =====================================================
+
+    // =========================================================
     // GAME SCREEN
-    // =====================================================
+    // =========================================================
 
-    private void showGame() {
+    private void showGameScreen() {
 
-        ScrollView scroll =
-                new ScrollView(this);
+        LinearLayout root = createRoot();
 
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(BG);
-
-        LinearLayout root = root();
 
         // HEADER
         LinearLayout header =
@@ -691,381 +433,420 @@ public class MainActivity extends Activity {
                 Gravity.CENTER_VERTICAL
         );
 
-        TextView title = text(
-                "🇮🇳 Coin Rush India",
-                25,
-                WHITE
-        );
 
-        title.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
+        TextView title =
+                createText(
+                        "🇮🇳 Coin Rush India",
+                        24,
+                        WHITE,
+                        true
+                );
 
-        title.setSingleLine(true);
 
         header.addView(
                 title,
                 new LinearLayout.LayoutParams(
                         0,
-                        dp(55),
+                        -2,
                         1
                 )
         );
 
-        Button logout =
-                smallButton("Logout");
 
-        header.addView(
-                logout,
-                new LinearLayout.LayoutParams(
-                        dp(82),
-                        dp(42)
-                )
-        );
-
-        root.addView(
-                header,
-                lp(
-                        MATCH,
-                        dp(55)
-                )
-        );
-
-        String username =
-                prefs.getString(
-                        KEY_USERNAME,
-                        "Player"
+        logoutButton =
+                createButton(
+                        "Logout",
+                        RED
                 );
 
-        TextView player = text(
-                "Player: " + username,
-                14,
-                GREY
-        );
+        logoutButton.setTextSize(12);
 
-        player.setGravity(
-                Gravity.CENTER
-        );
-
-        root.addView(
-                player,
-                lp(
-                        MATCH,
-                        dp(30)
+        header.addView(
+                logoutButton,
+                new LinearLayout.LayoutParams(
+                        dp(85),
+                        dp(45)
                 )
         );
 
-        TextView subtitle = text(
-                "TAP • COLLECT • RUSH!",
-                14,
-                GREY
+
+        root.addView(header);
+
+
+        logoutButton.setOnClickListener(v -> {
+
+            stopTimer();
+
+            prefs.edit()
+                    .putBoolean("loggedIn", false)
+                    .apply();
+
+            showLoginScreen();
+        });
+
+
+        // PLAYER
+        TextView playerText =
+                createText(
+                        "Player: " + username,
+                        16,
+                        GRAY,
+                        false
+                );
+
+        LinearLayout.LayoutParams playerParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        -2
+                );
+
+        playerParams.setMargins(
+                0,
+                15,
+                0,
+                5
         );
 
-        subtitle.setGravity(
-                Gravity.CENTER
-        );
+        playerText.setLayoutParams(playerParams);
 
-        root.addView(
-                subtitle,
-                lp(
-                        MATCH,
-                        dp(35)
-                )
-        );
+        root.addView(playerText);
 
-        addSpace(root, 6);
+
+        TextView subtitle =
+                createText(
+                        "TAP • COLLECT • RUSH!",
+                        15,
+                        GRAY,
+                        true
+                );
+
+        root.addView(subtitle);
+
 
         // SCORE CARD
         LinearLayout scoreCard =
-                card();
+                new LinearLayout(this);
+
+        scoreCard.setOrientation(
+                LinearLayout.VERTICAL
+        );
 
         scoreCard.setGravity(
                 Gravity.CENTER
         );
 
-        scoreText = text(
-                "0 COINS",
-                34,
-                Color.YELLOW
+        scoreCard.setPadding(
+                dp(10),
+                dp(20),
+                dp(10),
+                dp(20)
         );
 
-        scoreText.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
+        scoreCard.setBackgroundColor(CARD);
 
-        scoreText.setGravity(
-                Gravity.CENTER
-        );
 
-        scoreCard.addView(
-                scoreText,
-                lp(
-                        MATCH,
-                        dp(55)
-                )
-        );
-
-        bestText = text(
-                "BEST: " + bestScore,
-                13,
-                GREY
-        );
-
-        bestText.setGravity(
-                Gravity.CENTER
-        );
-
-        scoreCard.addView(
-                bestText,
-                lp(
-                        MATCH,
-                        dp(25)
-                )
-        );
-
-        totalCoinsText = text(
-                "TOTAL COINS: " + totalCoins,
-                13,
-                GREY
-        );
-
-        totalCoinsText.setGravity(
-                Gravity.CENTER
-        );
-
-        scoreCard.addView(
-                totalCoinsText,
-                lp(
-                        MATCH,
-                        dp(25)
-                )
-        );
-
-        root.addView(
-                scoreCard,
-                lp(
-                        MATCH,
-                        dp(120)
-                )
-        );
-
-        addSpace(root, 6);
-
-        // TIMER
-        timerText = text(
-                "⏱  30",
-                22,
-                WHITE
-        );
-
-        timerText.setGravity(
-                Gravity.CENTER
-        );
-
-        root.addView(
-                timerText,
-                lp(
-                        MATCH,
-                        dp(45)
-                )
-        );
-
-        // MESSAGE
-        messageText = text(
-                "Tap the coin as fast as you can!",
-                15,
-                GREY
-        );
-
-        messageText.setGravity(
-                Gravity.CENTER
-        );
-
-        root.addView(
-                messageText,
-                lp(
-                        MATCH,
-                        dp(55)
-                )
-        );
-
-        // COIN BUTTON
-        coinButton =
-                new Button(this);
-
-        coinButton.setText(
-                "🪙\nTAP!"
-        );
-
-        coinButton.setTextSize(26);
-
-        coinButton.setTextColor(WHITE);
-
-        coinButton.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        coinButton.setGravity(
-                Gravity.CENTER
-        );
-
-        coinButton.setAllCaps(false);
-
-        coinButton.setPadding(
-                0,
-                0,
-                0,
-                0
-        );
-
-        coinButton.setBackground(
-                round(
-                        ORANGE,
-                        500
-                )
-        );
-
-        LinearLayout.LayoutParams coinParams =
-                new LinearLayout.LayoutParams(
-                        dp(205),
-                        dp(205)
+        scoreText =
+                createText(
+                        "0 COINS",
+                        38,
+                        WHITE,
+                        true
                 );
 
-        coinParams.gravity =
-                Gravity.CENTER;
+        scoreCard.addView(scoreText);
 
-        root.addView(
-                coinButton,
-                coinParams
+
+        LinearLayout.LayoutParams scoreParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        -2
+                );
+
+        scoreParams.setMargins(
+                0,
+                20,
+                0,
+                15
         );
 
-        addSpace(root, 10);
+        scoreCard.setLayoutParams(scoreParams);
+
+        root.addView(scoreCard);
+
+
+        // STATS
+        LinearLayout stats =
+                new LinearLayout(this);
+
+        stats.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        stats.setGravity(
+                Gravity.CENTER
+        );
+
+
+        bestText =
+                createText(
+                        "BEST: " + bestScore,
+                        15,
+                        GRAY,
+                        true
+                );
+
+
+        totalText =
+                createText(
+                        "TOTAL: " + totalCoins,
+                        15,
+                        GRAY,
+                        true
+                );
+
+
+        stats.addView(
+                bestText,
+                new LinearLayout.LayoutParams(
+                        0,
+                        -2,
+                        1
+                )
+        );
+
+
+        stats.addView(
+                totalText,
+                new LinearLayout.LayoutParams(
+                        0,
+                        -2,
+                        1
+                )
+        );
+
+
+        root.addView(stats);
+
+
+        // TIMER
+        timerText =
+                createText(
+                        "TIME: 30",
+                        18,
+                        ORANGE,
+                        true
+                );
+
+        LinearLayout.LayoutParams timerParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        -2
+                );
+
+        timerParams.setMargins(
+                0,
+                20,
+                0,
+                10
+        );
+
+        timerText.setLayoutParams(timerParams);
+
+        root.addView(timerText);
+
+
+        // MESSAGE
+        messageText =
+                createText(
+                        "Tap the button!",
+                        16,
+                        WHITE,
+                        true
+                );
+
+        root.addView(messageText);
+
+
+        // TAP BUTTON
+        tapButton =
+                createButton(
+                        "TAP!",
+                        ORANGE
+                );
+
+        tapButton.setTextSize(30);
+
+        LinearLayout.LayoutParams tapParams =
+                new LinearLayout.LayoutParams(
+                        dp(180),
+                        dp(180)
+                );
+
+        tapParams.gravity =
+                Gravity.CENTER_HORIZONTAL;
+
+        tapParams.setMargins(
+                0,
+                20,
+                0,
+                20
+        );
+
+        tapButton.setLayoutParams(tapParams);
+
+        root.addView(tapButton);
+
 
         // REWARD BUTTON
         rewardButton =
-                button(
-                        "🎁  WATCH AD • 2X COINS",
+                createButton(
+                        "🎁 WATCH AD • 2X COINS",
                         GREEN
                 );
 
-        root.addView(
-                rewardButton,
-                lp(
-                        MATCH,
-                        dp(55)
-                )
-        );
+        root.addView(rewardButton);
 
-        addSpace(root, 8);
 
         // RESTART BUTTON
         restartButton =
-                button(
-                        "↪  RESTART GAME",
-                        DARK
+                createButton(
+                        "↪ RESTART GAME",
+                        CARD
                 );
 
-        root.addView(
-                restartButton,
-                lp(
-                        MATCH,
-                        dp(52)
-                )
-        );
+        root.addView(restartButton);
 
-        addSpace(root, 15);
 
-        scroll.addView(root);
+        // TAP ACTION
+        tapButton.setOnClickListener(v -> {
 
-        // COIN CLICK
-        coinButton.setOnClickListener(v -> {
+            if (timeLeft <= 0) {
+                return;
+            }
 
-            score++;
+            coins++;
+
             totalCoins++;
 
             updateScore();
-            updateTotalCoins();
-            animateCoin();
+
+            // small feedback
+            tapButton.setScaleX(0.94f);
+            tapButton.setScaleY(0.94f);
+
+            tapButton.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(80)
+                    .start();
         });
+
 
         // REWARD
-        rewardButton.setOnClickListener(
-                v -> showRewarded()
-        );
+        rewardButton.setOnClickListener(v -> {
 
-        // RESTART
-        restartButton.setOnClickListener(
-                v -> startGame()
-        );
+            if (coins <= 0) {
 
-        // LOGOUT
-        logout.setOnClickListener(v -> {
+                Toast.makeText(
+                        this,
+                        "Pehle coins collect karo",
+                        Toast.LENGTH_SHORT
+                ).show();
 
-            if (gameTimer != null) {
-                gameTimer.cancel();
+                return;
             }
 
-            prefs.edit()
-                    .putBoolean(
-                            KEY_LOGGED_IN,
-                            false
-                    )
-                    .apply();
 
-            showLogin();
+            int bonus = coins;
+
+            coins = coins * 2;
+
+            totalCoins += bonus;
+
+
+            if (coins > bestScore) {
+                bestScore = coins;
+            }
+
+
+            saveGameData();
+
+            updateScore();
+
+
+            messageText.setText(
+                    "🎉 REWARD! Coins doubled!"
+            );
+
+
+            rewardButton.setVisibility(
+                    View.GONE
+            );
         });
 
-        setContentView(scroll);
+
+        // RESTART
+        restartButton.setOnClickListener(v ->
+                startGame()
+        );
+
+
+        setContentView(
+                wrapScroll(root)
+        );
+
 
         startGame();
     }
 
-    // =====================================================
+
+    // =========================================================
     // START GAME
-    // =====================================================
+    // =========================================================
 
     private void startGame() {
 
-        score = 0;
+        stopTimer();
 
-        updateScore();
 
-        if (timerText != null) {
+        coins = 0;
 
-            timerText.setText(
-                    "⏱  30"
+        timeLeft = 30;
+
+
+        if (tapButton != null) {
+            tapButton.setVisibility(
+                    View.VISIBLE
             );
         }
+
+
+        if (rewardButton != null) {
+            rewardButton.setVisibility(
+                    View.VISIBLE
+            );
+        }
+
+
+        if (restartButton != null) {
+            restartButton.setVisibility(
+                    View.VISIBLE
+            );
+        }
+
 
         if (messageText != null) {
 
             messageText.setText(
-                    "Tap the coin as fast as you can!"
+                    "Tap the button!"
             );
         }
 
-        coinButton.setVisibility(
-                View.VISIBLE
-        );
 
-        coinButton.setEnabled(true);
+        updateScore();
 
-        rewardButton.setVisibility(
-                View.GONE
-        );
 
-        restartButton.setVisibility(
-                View.GONE
-        );
-
-        if (gameTimer != null) {
-            gameTimer.cancel();
-        }
-
-        gameTimer =
+        timer =
                 new CountDownTimer(
                         30000,
                         1000
@@ -1076,331 +857,157 @@ public class MainActivity extends Activity {
                             long millisUntilFinished
                     ) {
 
-                        long seconds =
-                                (millisUntilFinished + 999)
-                                        / 1000;
+                        timeLeft =
+                                (int)
+                                        (millisUntilFinished / 1000);
 
-                        timerText.setText(
-                                "⏱  " + seconds
-                        );
+                        updateTimer();
                     }
+
 
                     @Override
                     public void onFinish() {
 
-                        timerText.setText(
-                                "⏱  0"
-                        );
+                        timeLeft = 0;
 
-                        coinButton.setEnabled(
-                                false
-                        );
+                        updateTimer();
 
-                        // Hide huge TAP button
-                        coinButton.setVisibility(
-                                View.GONE
-                        );
-
-                        updateBest();
-
-                        saveTotalCoins();
-
-                        messageText.setText(
-                                "🎉 GAME OVER!\n" +
-                                "You collected " +
-                                score +
-                                " coins!"
-                        );
-
-                        rewardButton.setVisibility(
-                                View.VISIBLE
-                        );
-
-                        restartButton.setVisibility(
-                                View.VISIBLE
-                        );
-
-                        // Live interstitial
-                        showInterstitial();
+                        gameOver();
                     }
+
                 };
 
-        gameTimer.start();
+
+        timer.start();
     }
 
-    // =====================================================
-    // SCORE
-    // =====================================================
+
+    // =========================================================
+    // GAME OVER
+    // =========================================================
+
+    private void gameOver() {
+
+        stopTimer();
+
+
+        if (coins > bestScore) {
+
+            bestScore = coins;
+
+            saveGameData();
+        }
+
+
+        updateScore();
+
+
+        if (tapButton != null) {
+
+            tapButton.setVisibility(
+                    View.GONE
+            );
+        }
+
+
+        if (messageText != null) {
+
+            messageText.setText(
+                    "🏁 GAME OVER! Score: " + coins
+            );
+        }
+
+
+        Toast.makeText(
+                this,
+                "Game Over! Coins: " + coins,
+                Toast.LENGTH_SHORT
+        ).show();
+    }
+
+
+    // =========================================================
+    // UPDATE SCORE
+    // =========================================================
 
     private void updateScore() {
 
         if (scoreText != null) {
 
             scoreText.setText(
-                    score + " COINS"
-            );
-        }
-    }
-
-    // =====================================================
-    // TOTAL COINS
-    // =====================================================
-
-    private void updateTotalCoins() {
-
-        if (totalCoinsText != null) {
-
-            totalCoinsText.setText(
-                    "TOTAL COINS: " +
-                    totalCoins
+                    coins + " COINS"
             );
         }
 
-        saveTotalCoins();
-    }
-
-    private void saveTotalCoins() {
-
-        prefs.edit()
-                .putInt(
-                        KEY_TOTAL_COINS,
-                        totalCoins
-                )
-                .apply();
-    }
-
-    // =====================================================
-    // BEST SCORE
-    // =====================================================
-
-    private void updateBest() {
-
-        if (score > bestScore) {
-
-            bestScore = score;
-
-            prefs.edit()
-                    .putInt(
-                            KEY_BEST_SCORE,
-                            bestScore
-                    )
-                    .apply();
-        }
 
         if (bestText != null) {
 
             bestText.setText(
-                    "BEST: " +
-                    bestScore
+                    "BEST: " + bestScore
+            );
+        }
+
+
+        if (totalText != null) {
+
+            totalText.setText(
+                    "TOTAL: " + totalCoins
+            );
+        }
+
+
+        saveGameData();
+    }
+
+
+    // =========================================================
+    // UPDATE TIMER
+    // =========================================================
+
+    private void updateTimer() {
+
+        if (timerText != null) {
+
+            timerText.setText(
+                    "TIME: " + timeLeft
             );
         }
     }
 
-    // =====================================================
-    // COIN ANIMATION
-    // =====================================================
 
-    private void animateCoin() {
+    // =========================================================
+    // SAVE DATA
+    // =========================================================
 
-        ScaleAnimation animation =
-                new ScaleAnimation(
-                        1f,
-                        0.88f,
-                        1f,
-                        0.88f,
-                        ScaleAnimation.RELATIVE_TO_SELF,
-                        0.5f,
-                        ScaleAnimation.RELATIVE_TO_SELF,
-                        0.5f
-                );
+    private void saveGameData() {
 
-        animation.setDuration(70);
-
-        animation.setRepeatCount(1);
-
-        animation.setRepeatMode(
-                ScaleAnimation.REVERSE
-        );
-
-        coinButton.startAnimation(
-                animation
-        );
+        prefs.edit()
+                .putInt("bestScore", bestScore)
+                .putInt("totalCoins", totalCoins)
+                .apply();
     }
 
-    // =====================================================
-    // LOAD LIVE INTERSTITIAL
-    // =====================================================
 
-    private void loadInterstitial() {
+    // =========================================================
+    // STOP TIMER
+    // =========================================================
 
-        AdRequest request =
-                new AdRequest.Builder()
-                        .build();
+    private void stopTimer() {
 
-        InterstitialAd.load(
-                this,
-                INTERSTITIAL_AD_ID,
-                request,
-                new InterstitialAdLoadCallback() {
+        if (timer != null) {
 
-                    @Override
-                    public void onAdLoaded(
-                            InterstitialAd ad
-                    ) {
+            timer.cancel();
 
-                        interstitialAd = ad;
-
-                        interstitialAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
-
-                                            @Override
-                                            public void onAdDismissedFullScreenContent() {
-
-                                                interstitialAd =
-                                                        null;
-
-                                                loadInterstitial();
-                                            }
-                                        }
-                                );
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(
-                            LoadAdError error
-                    ) {
-
-                        interstitialAd = null;
-                    }
-                }
-        );
-    }
-
-    // =====================================================
-    // SHOW LIVE INTERSTITIAL
-    // =====================================================
-
-    private void showInterstitial() {
-
-        if (interstitialAd != null) {
-
-            interstitialAd.show(this);
-
-        } else {
-
-            loadInterstitial();
+            timer = null;
         }
     }
 
-    // =====================================================
-    // LOAD LIVE REWARDED
-    // =====================================================
 
-    private void loadRewarded() {
+    // =========================================================
+    // ROOT LAYOUT
+    // =========================================================
 
-        AdRequest request =
-                new AdRequest.Builder()
-                        .build();
-
-        RewardedAd.load(
-                this,
-                REWARDED_AD_ID,
-                request,
-                new RewardedAdLoadCallback() {
-
-                    @Override
-                    public void onAdLoaded(
-                            RewardedAd ad
-                    ) {
-
-                        rewardedAd = ad;
-
-                        rewardedAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
-
-                                            @Override
-                                            public void onAdDismissedFullScreenContent() {
-
-                                                rewardedAd =
-                                                        null;
-
-                                                loadRewarded();
-                                            }
-                                        }
-                                );
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(
-                            LoadAdError error
-                    ) {
-
-                        rewardedAd = null;
-                    }
-                }
-        );
-    }
-
-    // =====================================================
-    // SHOW LIVE REWARDED
-    // =====================================================
-
-    private void showRewarded() {
-
-        if (rewardedAd != null) {
-
-            rewardedAd.show(
-                    this,
-                    rewardItem -> {
-
-                        // 2X current round coins
-                        int bonus = score;
-
-                        score =
-                                score * 2;
-
-                        // Only bonus coins are added
-                        // to permanent total here
-                        totalCoins =
-                                totalCoins + bonus;
-
-                        updateScore();
-                        updateTotalCoins();
-
-                        updateBest();
-
-                        messageText.setText(
-                                "🎉 REWARD!\n" +
-                                "Coins doubled!"
-                        );
-
-                        toast(
-                                "Coins 2X! 🎉"
-                        );
-
-                        rewardedAd = null;
-
-                        loadRewarded();
-                    }
-            );
-
-        } else {
-
-            toast(
-                    "Reward ad is loading..."
-            );
-
-            loadRewarded();
-        }
-    }
-
-    // =====================================================
-    // ROOT
-    // =====================================================
-
-    private LinearLayout root() {
+    private LinearLayout createRoot() {
 
         LinearLayout root =
                 new LinearLayout(this);
@@ -1414,10 +1021,10 @@ public class MainActivity extends Activity {
         );
 
         root.setPadding(
-                dp(14),
-                dp(10),
-                dp(14),
-                dp(10)
+                dp(20),
+                dp(25),
+                dp(20),
+                dp(30)
         );
 
         root.setBackgroundColor(BG);
@@ -1425,276 +1032,189 @@ public class MainActivity extends Activity {
         return root;
     }
 
-    // =====================================================
-    // CARD
-    // =====================================================
 
-    private LinearLayout card() {
+    // =========================================================
+    // SCROLL VIEW
+    // =========================================================
 
-        LinearLayout card =
-                new LinearLayout(this);
-
-        card.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        card.setGravity(
-                Gravity.CENTER_HORIZONTAL
-        );
-
-        card.setPadding(
-                dp(14),
-                dp(10),
-                dp(14),
-                dp(10)
-        );
-
-        card.setBackground(
-                round(
-                        CARD,
-                        22
-                )
-        );
-
-        return card;
-    }
-
-    // =====================================================
-    // TEXT
-    // =====================================================
-
-    private TextView text(
-            String value,
-            float size,
-            int color
+    private ScrollView wrapScroll(
+            LinearLayout root
     ) {
 
-        TextView t =
-                new TextView(this);
+        ScrollView scroll =
+                new ScrollView(this);
 
-        t.setText(value);
+        scroll.setFillViewport(true);
 
-        t.setTextSize(size);
+        scroll.setBackgroundColor(BG);
 
-        t.setTextColor(color);
+        scroll.addView(root);
 
-        t.setGravity(
-                Gravity.CENTER_VERTICAL
-        );
-
-        return t;
+        return scroll;
     }
 
-    // =====================================================
-    // INPUT
-    // =====================================================
 
-    private EditText input(
+    // =========================================================
+    // TEXT VIEW
+    // =========================================================
+
+    private TextView createText(
+            String text,
+            float size,
+            int color,
+            boolean bold
+    ) {
+
+        TextView tv =
+                new TextView(this);
+
+        tv.setText(text);
+
+        tv.setTextSize(size);
+
+        tv.setTextColor(color);
+
+        tv.setGravity(
+                Gravity.CENTER
+        );
+
+        if (bold) {
+
+            tv.setTypeface(
+                    Typeface.DEFAULT,
+                    Typeface.BOLD
+            );
+        }
+
+        tv.setPadding(
+                dp(5),
+                dp(5),
+                dp(5),
+                dp(5)
+        );
+
+        return tv;
+    }
+
+
+    // =========================================================
+    // INPUT
+    // =========================================================
+
+    private EditText createInput(
             String hint
     ) {
 
-        EditText e =
+        EditText input =
                 new EditText(this);
 
-        e.setHint(hint);
+        input.setHint(hint);
 
-        e.setHintTextColor(
-                Color.rgb(
-                        150,
-                        155,
-                        170
-                )
+        input.setTextColor(WHITE);
+
+        input.setHintTextColor(GRAY);
+
+        input.setTextSize(16);
+
+        input.setSingleLine(true);
+
+        input.setPadding(
+                dp(15),
+                dp(12),
+                dp(15),
+                dp(12)
         );
 
-        e.setTextColor(WHITE);
 
-        e.setTextSize(17);
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(55)
+                );
 
-        e.setSingleLine(true);
-
-        e.setPadding(
-                dp(16),
+        params.setMargins(
                 0,
-                dp(16),
-                0
+                0,
+                0,
+                12
         );
 
-        e.setBackground(
-                round(
-                        INPUT,
-                        17
-                )
-        );
+        input.setLayoutParams(params);
 
-        return e;
+        return input;
     }
 
-    // =====================================================
-    // BUTTON
-    // =====================================================
 
-    private Button button(
-            String value,
-            int color
+    // =========================================================
+    // BUTTON
+    // =========================================================
+
+    private Button createButton(
+            String text,
+            int background
     ) {
 
-        Button b =
+        Button button =
                 new Button(this);
 
-        b.setText(value);
+        button.setText(text);
 
-        b.setTextSize(15);
+        button.setTextSize(15);
 
-        b.setTextColor(WHITE);
+        button.setTextColor(WHITE);
 
-        b.setTypeface(
+        button.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
 
-        b.setGravity(
-                Gravity.CENTER
+        button.setAllCaps(false);
+
+        button.setBackgroundColor(
+                background
         );
 
-        b.setAllCaps(false);
 
-        b.setMinHeight(0);
-
-        b.setMinimumHeight(0);
-
-        b.setPadding(
-                dp(5),
-                0,
-                dp(5),
-                0
-        );
-
-        b.setBackground(
-                round(
-                        color,
-                        18
-                )
-        );
-
-        return b;
-    }
-
-    // =====================================================
-    // SMALL BUTTON
-    // =====================================================
-
-    private Button smallButton(
-            String value
-    ) {
-
-        Button b =
-                button(
-                        value,
-                        DARK
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(55)
                 );
 
-        b.setTextSize(12);
-
-        return b;
-    }
-
-    // =====================================================
-    // ROUND BACKGROUND
-    // =====================================================
-
-    private GradientDrawable round(
-            int color,
-            int radius
-    ) {
-
-        GradientDrawable d =
-                new GradientDrawable();
-
-        d.setColor(color);
-
-        d.setCornerRadius(
-                dp(radius)
+        params.setMargins(
+                0,
+                8,
+                0,
+                8
         );
 
-        return d;
+        button.setLayoutParams(params);
+
+        return button;
     }
 
-    // =====================================================
-    // LAYOUT
-    // =====================================================
 
-    private static final int MATCH =
-            LinearLayout.LayoutParams.MATCH_PARENT;
-
-    private static final int WRAP =
-            LinearLayout.LayoutParams.WRAP_CONTENT;
-
-    private LinearLayout.LayoutParams lp(
-            int width,
-            int height
-    ) {
-
-        return new LinearLayout.LayoutParams(
-                width,
-                height
-        );
-    }
-
-    // =====================================================
-    // SPACE
-    // =====================================================
-
-    private void addSpace(
-            LinearLayout layout,
-            int size
-    ) {
-
-        View space =
-                new View(this);
-
-        layout.addView(
-                space,
-                new LinearLayout.LayoutParams(
-                        1,
-                        dp(size)
-                )
-        );
-    }
-
-    // =====================================================
-    // DP
-    // =====================================================
+    // =========================================================
+    // DP HELPER
+    // =========================================================
 
     private int dp(int value) {
 
-        return (int) (
-                value *
-                getResources()
-                        .getDisplayMetrics()
-                        .density
-        );
+        return (int)
+                (
+                        value
+                                * getResources()
+                                .getDisplayMetrics()
+                                .density
+                );
     }
 
-    // =====================================================
-    // TOAST
-    // =====================================================
 
-    private void toast(
-            String message
-    ) {
-
-        Toast.makeText(
-                this,
-                message,
-                Toast.LENGTH_SHORT
-        ).show();
-    }
-
-    // =====================================================
+    // =========================================================
     // PASSWORD HASH
-    // =====================================================
+    // =========================================================
 
-    private String hash(
+    private String hashPassword(
             String password
     ) {
 
@@ -1705,31 +1225,34 @@ public class MainActivity extends Activity {
                             "SHA-256"
                     );
 
-            byte[] bytes =
+            byte[] hash =
                     digest.digest(
                             password.getBytes(
-                                    "UTF-8"
+                                    StandardCharsets.UTF_8
                             )
                     );
 
-            StringBuilder result =
+
+            StringBuilder hex =
                     new StringBuilder();
 
-            for (byte b : bytes) {
+
+            for (byte b : hash) {
 
                 String h =
                         Integer.toHexString(
-                                b & 0xff
+                                0xff & b
                         );
 
                 if (h.length() == 1) {
-                    result.append('0');
+                    hex.append('0');
                 }
 
-                result.append(h);
+                hex.append(h);
             }
 
-            return result.toString();
+
+            return hex.toString();
 
         } catch (Exception e) {
 
@@ -1737,16 +1260,15 @@ public class MainActivity extends Activity {
         }
     }
 
-    // =====================================================
-    // DESTROY
-    // =====================================================
+
+    // =========================================================
+    // ACTIVITY CLOSE
+    // =========================================================
 
     @Override
     protected void onDestroy() {
 
-        if (gameTimer != null) {
-            gameTimer.cancel();
-        }
+        stopTimer();
 
         super.onDestroy();
     }
