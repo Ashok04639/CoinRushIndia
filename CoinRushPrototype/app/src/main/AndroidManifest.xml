@@ -2,7 +2,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission
+        android:name="android.permission.INTERNET" />
 
     <application
         android:theme="@style/Theme.App"
@@ -10,10 +11,9 @@
         android:allowBackup="true"
         android:supportsRtl="true">
 
-        <!-- LIVE ADMOB APP ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-459015901387755~6817704062" />
 
         <activity
             android:name=".MainActivity"
