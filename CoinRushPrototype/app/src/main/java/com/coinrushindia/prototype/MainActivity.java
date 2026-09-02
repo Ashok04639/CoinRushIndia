@@ -91,42 +91,21 @@ public class MainActivity extends Activity {
 
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
 
-        super.onCreate(savedInstanceState);
+    TextView test = new TextView(this);
+    test.setText("🇮🇳 Coin Rush India\n\nAPP START TEST OK");
+    test.setTextSize(28);
+    test.setTextColor(Color.WHITE);
+    test.setGravity(Gravity.CENTER);
+    test.setBackgroundColor(BG);
 
-        prefs = getSharedPreferences(
-                "CoinRushIndia",
-                MODE_PRIVATE
-        );
+    setContentView(test);
 
-        username = prefs.getString(
-                "username",
-                ""
-        );
+    // initializeAds();
+}
 
-        bestScore = prefs.getInt(
-                "bestScore",
-                0
-        );
-
-        totalCoins = prefs.getInt(
-                "totalCoins",
-                0
-        );
-
-        if (prefs.getBoolean("loggedIn", false)
-                && !username.isEmpty()) {
-
-            showGameScreen();
-
-        } else {
-
-            showLoginScreen();
-        }
-
-        // initializeAds();
-    }
 
 
     // =========================================================
