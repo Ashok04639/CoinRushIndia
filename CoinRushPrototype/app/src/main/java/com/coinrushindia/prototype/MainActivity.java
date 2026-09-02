@@ -125,7 +125,7 @@ public class MainActivity extends Activity {
             showLoginScreen();
         }
 
-        initializeAds();
+        // initializeAds();
     }
 
 
