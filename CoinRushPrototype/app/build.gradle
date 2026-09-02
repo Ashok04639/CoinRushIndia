@@ -1,22 +1,30 @@
 plugins {
-    id 'com.android.application' version '8.6.1'
+    id 'com.android.application'
 }
 
 android {
-    namespace 'com.coinrushindia.app'
+    namespace 'com.coinrushindia.prototype'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.coinrushindia.app'
+        applicationId 'com.coinrushindia.prototype'
         minSdk 23
         targetSdk 35
         versionCode 1
         versionName '1.0'
     }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+dependencies {
 }
