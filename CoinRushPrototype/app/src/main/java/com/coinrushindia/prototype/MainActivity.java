@@ -32,14 +32,23 @@ import java.security.MessageDigest;
 public class MainActivity extends Activity {
 
     // =========================================================
-    // ACCOUNT STORAGE
+    // STORAGE
     // =========================================================
 
-    private static final String PREFS = "CoinRushIndiaPrefs";
-    private static final String KEY_USERNAME = "username";
-    private static final String KEY_PASSWORD = "password";
-    private static final String KEY_LOGGED_IN = "logged_in";
-    private static final String KEY_BEST_SCORE = "best_score";
+    private static final String PREFS =
+            "CoinRushIndiaPrefs";
+
+    private static final String KEY_USERNAME =
+            "username";
+
+    private static final String KEY_PASSWORD =
+            "password";
+
+    private static final String KEY_LOGGED_IN =
+            "logged_in";
+
+    private static final String KEY_BEST_SCORE =
+            "best_score";
 
     private SharedPreferences prefs;
 
@@ -63,18 +72,16 @@ public class MainActivity extends Activity {
     private int score = 0;
     private int bestScore = 0;
 
-    private CountDownTimer timer;
+    private CountDownTimer gameTimer;
 
     private TextView scoreText;
     private TextView timerText;
     private TextView messageText;
     private TextView bestText;
-    private TextView playerText;
 
     private Button coinButton;
     private Button rewardButton;
     private Button restartButton;
-    private Button logoutButton;
 
     // =========================================================
     // COLORS
@@ -84,10 +91,10 @@ public class MainActivity extends Activity {
             Color.rgb(13, 16, 27);
 
     private static final int CARD =
-            Color.rgb(28, 33, 47);
+            Color.rgb(29, 34, 48);
 
     private static final int INPUT =
-            Color.rgb(39, 44, 59);
+            Color.rgb(40, 45, 60);
 
     private static final int WHITE =
             Color.WHITE;
@@ -101,16 +108,19 @@ public class MainActivity extends Activity {
     private static final int GREEN =
             Color.rgb(42, 190, 105);
 
-    private static final int DARK_BUTTON =
-            Color.rgb(65, 70, 85);
+    private static final int DARK =
+            Color.rgb(68, 74, 90);
 
     // =========================================================
-    // ON CREATE
+    // CREATE
     // =========================================================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(Color.BLACK);
 
         prefs = getSharedPreferences(
                 PREFS,
@@ -134,71 +144,24 @@ public class MainActivity extends Activity {
                 KEY_LOGGED_IN,
                 false
         )) {
-
             showGame();
-
         } else {
-
             showLogin();
         }
     }
 
     // =========================================================
-    // ROOT SCREEN
-    // =========================================================
-
-    private LinearLayout createRoot() {
-
-        LinearLayout root =
-                new LinearLayout(this);
-
-        root.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        root.setGravity(
-                Gravity.CENTER_HORIZONTAL
-        );
-
-        root.setPadding(
-                18,
-                18,
-                18,
-                18
-        );
-
-        root.setBackgroundColor(BG);
-
-        return root;
-    }
-
-    // =========================================================
-    // SCROLL CONTAINER
-    // =========================================================
-
-    private ScrollView createScroll() {
-
-        ScrollView scroll =
-                new ScrollView(this);
-
-        scroll.setFillViewport(true);
-
-        scroll.setBackgroundColor(BG);
-
-        return scroll;
-    }
-
-    // =========================================================
-    // LOGIN
+    // LOGIN SCREEN
     // =========================================================
 
     private void showLogin() {
 
-        ScrollView scroll = createScroll();
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
 
-        LinearLayout root = createRoot();
+        LinearLayout root = root();
 
-        // TITLE
         TextView title = text(
                 "🇮🇳 Coin Rush India",
                 30,
@@ -210,34 +173,28 @@ public class MainActivity extends Activity {
                 Typeface.BOLD
         );
 
-        title.setGravity(
-                Gravity.CENTER
-        );
+        title.setGravity(Gravity.CENTER);
 
         root.addView(
                 title,
-                params(-1, 70)
+                lp(MATCH, dp(65))
         );
 
-        // SUBTITLE
         TextView subtitle = text(
                 "LOGIN TO PLAY",
-                18,
+                17,
                 GREY
         );
 
-        subtitle.setGravity(
-                Gravity.CENTER
-        );
+        subtitle.setGravity(Gravity.CENTER);
 
         root.addView(
                 subtitle,
-                params(-1, 45)
+                lp(MATCH, dp(40))
         );
 
-        space(root, 10);
+        addSpace(root, 12);
 
-        // CARD
         LinearLayout card = card();
 
         TextView heading = text(
@@ -251,26 +208,24 @@ public class MainActivity extends Activity {
                 Typeface.BOLD
         );
 
-        heading.setGravity(
-                Gravity.CENTER
-        );
+        heading.setGravity(Gravity.CENTER);
 
         card.addView(
                 heading,
-                params(-1, 55)
+                lp(MATCH, dp(50))
         );
 
-        space(card, 10);
+        addSpace(card, 12);
 
         EditText username =
                 input("Username");
 
         card.addView(
                 username,
-                params(-1, 55)
+                lp(MATCH, dp(52))
         );
 
-        space(card, 12);
+        addSpace(card, 12);
 
         EditText password =
                 input("Password");
@@ -282,12 +237,11 @@ public class MainActivity extends Activity {
 
         card.addView(
                 password,
-                params(-1, 55)
+                lp(MATCH, dp(52))
         );
 
-        space(card, 18);
+        addSpace(card, 18);
 
-        // LOGIN BUTTON
         Button login = button(
                 "🔐  LOGIN",
                 GREEN
@@ -295,12 +249,11 @@ public class MainActivity extends Activity {
 
         card.addView(
                 login,
-                params(-1, 58)
+                lp(MATCH, dp(54))
         );
 
-        space(card, 12);
+        addSpace(card, 12);
 
-        // SIGNUP BUTTON
         Button signup = button(
                 "📝  CREATE ACCOUNT",
                 ORANGE
@@ -308,36 +261,33 @@ public class MainActivity extends Activity {
 
         card.addView(
                 signup,
-                params(-1, 58)
+                lp(MATCH, dp(54))
         );
 
-        space(card, 12);
+        addSpace(card, 12);
 
         TextView info = text(
                 "Account is saved on this device.",
-                14,
+                13,
                 GREY
         );
 
-        info.setGravity(
-                Gravity.CENTER
-        );
+        info.setGravity(Gravity.CENTER);
 
         card.addView(
                 info,
-                params(-1, 40)
+                lp(MATCH, dp(35))
         );
 
         root.addView(
                 card,
-                params(-1, -2)
+                lp(MATCH, WRAP)
         );
 
-        space(root, 20);
+        addSpace(root, 20);
 
         scroll.addView(root);
 
-        // LOGIN ACTION
         login.setOnClickListener(v -> {
 
             String user =
@@ -371,8 +321,8 @@ public class MainActivity extends Activity {
                             ""
                     );
 
-            if (user.equals(savedUser) &&
-                    hash(pass).equals(savedPass)) {
+            if (user.equals(savedUser)
+                    && hash(pass).equals(savedPass)) {
 
                 prefs.edit()
                         .putBoolean(
@@ -395,7 +345,6 @@ public class MainActivity extends Activity {
             }
         });
 
-        // SIGNUP
         signup.setOnClickListener(
                 v -> showSignup()
         );
@@ -404,14 +353,16 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // SIGNUP
+    // SIGNUP SCREEN
     // =========================================================
 
     private void showSignup() {
 
-        ScrollView scroll = createScroll();
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
 
-        LinearLayout root = createRoot();
+        LinearLayout root = root();
 
         TextView title = text(
                 "🇮🇳 Coin Rush India",
@@ -428,7 +379,7 @@ public class MainActivity extends Activity {
 
         root.addView(
                 title,
-                params(-1, 70)
+                lp(MATCH, dp(65))
         );
 
         TextView subtitle = text(
@@ -441,10 +392,10 @@ public class MainActivity extends Activity {
 
         root.addView(
                 subtitle,
-                params(-1, 45)
+                lp(MATCH, dp(40))
         );
 
-        space(root, 10);
+        addSpace(root, 12);
 
         LinearLayout card = card();
 
@@ -463,20 +414,20 @@ public class MainActivity extends Activity {
 
         card.addView(
                 heading,
-                params(-1, 55)
+                lp(MATCH, dp(50))
         );
 
-        space(card, 10);
+        addSpace(card, 12);
 
         EditText username =
                 input("Choose Username");
 
         card.addView(
                 username,
-                params(-1, 55)
+                lp(MATCH, dp(52))
         );
 
-        space(card, 12);
+        addSpace(card, 12);
 
         EditText password =
                 input("Choose Password");
@@ -488,10 +439,10 @@ public class MainActivity extends Activity {
 
         card.addView(
                 password,
-                params(-1, 55)
+                lp(MATCH, dp(52))
         );
 
-        space(card, 12);
+        addSpace(card, 12);
 
         EditText confirm =
                 input("Confirm Password");
@@ -503,10 +454,10 @@ public class MainActivity extends Activity {
 
         card.addView(
                 confirm,
-                params(-1, 55)
+                lp(MATCH, dp(52))
         );
 
-        space(card, 18);
+        addSpace(card, 18);
 
         Button create = button(
                 "🚀  CREATE ACCOUNT",
@@ -515,31 +466,30 @@ public class MainActivity extends Activity {
 
         card.addView(
                 create,
-                params(-1, 58)
+                lp(MATCH, dp(54))
         );
 
-        space(card, 12);
+        addSpace(card, 12);
 
         Button back = button(
                 "←  BACK TO LOGIN",
-                DARK_BUTTON
+                DARK
         );
 
         card.addView(
                 back,
-                params(-1, 55)
+                lp(MATCH, dp(52))
         );
-
-        space(card, 10);
 
         root.addView(
                 card,
-                params(-1, -2)
+                lp(MATCH, WRAP)
         );
+
+        addSpace(root, 20);
 
         scroll.addView(root);
 
-        // CREATE ACCOUNT
         create.setOnClickListener(v -> {
 
             String user =
@@ -551,7 +501,7 @@ public class MainActivity extends Activity {
                     password.getText()
                             .toString();
 
-            String conf =
+            String confirmPass =
                     confirm.getText()
                             .toString();
 
@@ -573,7 +523,7 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            if (!pass.equals(conf)) {
+            if (!pass.equals(confirmPass)) {
 
                 toast(
                         "Passwords match nahi kar rahe"
@@ -632,9 +582,11 @@ public class MainActivity extends Activity {
 
     private void showGame() {
 
-        ScrollView scroll = createScroll();
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
 
-        LinearLayout root = createRoot();
+        LinearLayout root = root();
 
         // HEADER
         LinearLayout header =
@@ -659,66 +611,66 @@ public class MainActivity extends Activity {
                 Typeface.BOLD
         );
 
+        title.setSingleLine(true);
+
         header.addView(
                 title,
                 new LinearLayout.LayoutParams(
                         0,
-                        65,
+                        dp(55),
                         1
                 )
         );
 
-        logoutButton =
+        Button logout =
                 smallButton("Logout");
 
         header.addView(
-                logoutButton,
+                logout,
                 new LinearLayout.LayoutParams(
-                        95,
-                        48
+                        dp(82),
+                        dp(42)
                 )
         );
 
         root.addView(
                 header,
-                params(-1, 65)
+                lp(MATCH, dp(55))
         );
 
-        String user =
+        String username =
                 prefs.getString(
                         KEY_USERNAME,
                         "Player"
                 );
 
-        playerText = text(
-                "Player: " + user,
+        TextView player = text(
+                "Player: " + username,
                 14,
                 GREY
         );
 
-        playerText.setGravity(
-                Gravity.CENTER
-        );
+        player.setGravity(Gravity.CENTER);
 
         root.addView(
-                playerText,
-                params(-1, 35)
+                player,
+                lp(MATCH, dp(30))
         );
 
         TextView subtitle = text(
                 "TAP • COLLECT • RUSH!",
-                15,
+                14,
                 GREY
         );
 
-        subtitle.setGravity(
-                Gravity.CENTER
-        );
+        subtitle.setGravity(Gravity.CENTER);
 
         root.addView(
                 subtitle,
-                params(-1, 40)
+                lp(MATCH, dp(35))
         );
+
+        addSpace(root, 6);
 
         // SCORE CARD
         LinearLayout scoreCard = card();
@@ -729,7 +681,7 @@ public class MainActivity extends Activity {
 
         scoreText = text(
                 "0 COINS",
-                36,
+                34,
                 Color.YELLOW
         );
 
@@ -744,12 +696,12 @@ public class MainActivity extends Activity {
 
         scoreCard.addView(
                 scoreText,
-                params(-1, 65)
+                lp(MATCH, dp(55))
         );
 
         bestText = text(
                 "BEST: " + bestScore,
-                14,
+                13,
                 GREY
         );
 
@@ -759,20 +711,20 @@ public class MainActivity extends Activity {
 
         scoreCard.addView(
                 bestText,
-                params(-1, 30)
+                lp(MATCH, dp(25))
         );
 
         root.addView(
                 scoreCard,
-                params(-1, 110)
+                lp(MATCH, dp(95))
         );
 
-        space(root, 8);
+        addSpace(root, 6);
 
         // TIMER
         timerText = text(
-                "⏱️  30",
-                23,
+                "⏱  30",
+                22,
                 WHITE
         );
 
@@ -782,13 +734,13 @@ public class MainActivity extends Activity {
 
         root.addView(
                 timerText,
-                params(-1, 50)
+                lp(MATCH, dp(45))
         );
 
         // MESSAGE
         messageText = text(
                 "Tap the coin as fast as you can!",
-                16,
+                15,
                 GREY
         );
 
@@ -798,17 +750,17 @@ public class MainActivity extends Activity {
 
         root.addView(
                 messageText,
-                params(-1, 55)
+                lp(MATCH, dp(55))
         );
 
-        // COIN
+        // COIN BUTTON
         coinButton = new Button(this);
 
         coinButton.setText(
                 "🪙\nTAP!"
         );
 
-        coinButton.setTextSize(27);
+        coinButton.setTextSize(26);
 
         coinButton.setTextColor(WHITE);
 
@@ -823,24 +775,19 @@ public class MainActivity extends Activity {
 
         coinButton.setAllCaps(false);
 
-        coinButton.setPadding(
-                0,
-                0,
-                0,
-                0
-        );
+        coinButton.setPadding(0, 0, 0, 0);
 
         coinButton.setBackground(
                 round(
                         ORANGE,
-                        300
+                        500
                 )
         );
 
         LinearLayout.LayoutParams coinParams =
                 new LinearLayout.LayoutParams(
-                        220,
-                        220
+                        dp(205),
+                        dp(205)
                 );
 
         coinParams.gravity =
@@ -851,7 +798,7 @@ public class MainActivity extends Activity {
                 coinParams
         );
 
-        space(root, 8);
+        addSpace(root, 10);
 
         // REWARD
         rewardButton = button(
@@ -861,25 +808,30 @@ public class MainActivity extends Activity {
 
         root.addView(
                 rewardButton,
-                params(-1, 58)
+                lp(MATCH, dp(55))
         );
 
-        space(root, 8);
+        addSpace(root, 8);
 
         // RESTART
         restartButton = button(
-                "↪️  RESTART GAME",
-                DARK_BUTTON
+                "↪  RESTART GAME",
+                DARK
         );
 
         root.addView(
                 restartButton,
-                params(-1, 55)
+                lp(MATCH, dp(52))
         );
+
+        addSpace(root, 12);
 
         scroll.addView(root);
 
-        // TAP
+        // =====================================================
+        // BUTTON ACTIONS
+        // =====================================================
+
         coinButton.setOnClickListener(v -> {
 
             score++;
@@ -889,21 +841,18 @@ public class MainActivity extends Activity {
             animateCoin();
         });
 
-        // REWARD
         rewardButton.setOnClickListener(
                 v -> showRewarded()
         );
 
-        // RESTART
         restartButton.setOnClickListener(
                 v -> startGame()
         );
 
-        // LOGOUT
-        logoutButton.setOnClickListener(v -> {
+        logout.setOnClickListener(v -> {
 
-            if (timer != null) {
-                timer.cancel();
+            if (gameTimer != null) {
+                gameTimer.cancel();
             }
 
             prefs.edit()
@@ -932,14 +881,13 @@ public class MainActivity extends Activity {
         updateScore();
 
         timerText.setText(
-                "⏱️  30"
+                "⏱  30"
         );
 
         messageText.setText(
                 "Tap the coin as fast as you can!"
         );
 
-        // IMPORTANT
         coinButton.setVisibility(
                 View.VISIBLE
         );
@@ -954,25 +902,25 @@ public class MainActivity extends Activity {
                 View.GONE
         );
 
-        if (timer != null) {
-            timer.cancel();
+        if (gameTimer != null) {
+            gameTimer.cancel();
         }
 
-        timer = new CountDownTimer(
+        gameTimer = new CountDownTimer(
                 30000,
                 1000
         ) {
 
             @Override
             public void onTick(
-                    long remaining
+                    long millis
             ) {
 
                 long seconds =
-                        (remaining + 999) / 1000;
+                        (millis + 999) / 1000;
 
                 timerText.setText(
-                        "⏱️  " + seconds
+                        "⏱  " + seconds
                 );
             }
 
@@ -980,13 +928,13 @@ public class MainActivity extends Activity {
             public void onFinish() {
 
                 timerText.setText(
-                        "⏱️  0"
+                        "⏱  0"
                 );
 
                 coinButton.setEnabled(false);
 
-                // IMPORTANT:
-                // GAME OVER पर बड़ा TAP button छुपेगा
+                // सबसे जरूरी FIX:
+                // Game Over पर बड़ा coin button hide
                 coinButton.setVisibility(
                         View.GONE
                 );
@@ -1012,7 +960,7 @@ public class MainActivity extends Activity {
             }
         };
 
-        timer.start();
+        gameTimer.start();
     }
 
     // =========================================================
@@ -1056,7 +1004,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // TAP ANIMATION
+    // COIN ANIMATION
     // =========================================================
 
     private void animateCoin() {
@@ -1093,8 +1041,7 @@ public class MainActivity extends Activity {
     private void loadInterstitial() {
 
         AdRequest request =
-                new AdRequest.Builder()
-                        .build();
+                new AdRequest.Builder().build();
 
         InterstitialAd.load(
                 this,
@@ -1159,8 +1106,7 @@ public class MainActivity extends Activity {
     private void loadRewarded() {
 
         AdRequest request =
-                new AdRequest.Builder()
-                        .build();
+                new AdRequest.Builder().build();
 
         RewardedAd.load(
                 this,
@@ -1245,37 +1191,66 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
+    // ROOT
+    // =========================================================
+
+    private LinearLayout root() {
+
+        LinearLayout root =
+                new LinearLayout(this);
+
+        root.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        root.setGravity(
+                Gravity.CENTER_HORIZONTAL
+        );
+
+        root.setPadding(
+                dp(14),
+                dp(10),
+                dp(14),
+                dp(10)
+        );
+
+        root.setBackgroundColor(BG);
+
+        return root;
+    }
+
+    // =========================================================
     // CARD
     // =========================================================
 
     private LinearLayout card() {
 
-        LinearLayout layout =
+        LinearLayout card =
                 new LinearLayout(this);
 
-        layout.setOrientation(
+        card.setOrientation(
                 LinearLayout.VERTICAL
         );
 
-        layout.setGravity(
+        card.setGravity(
                 Gravity.CENTER_HORIZONTAL
         );
 
-        layout.setPadding(
-                14,
-                12,
-                14,
-                12
+        card.setPadding(
+                dp(14),
+                dp(10),
+                dp(14),
+                dp(10)
         );
 
-        layout.setBackground(
+        card.setBackground(
                 round(
                         CARD,
-                        25
+                        22
                 )
         );
 
-        return layout;
+        return card;
     }
 
     // =========================================================
@@ -1332,16 +1307,16 @@ public class MainActivity extends Activity {
         e.setSingleLine(true);
 
         e.setPadding(
-                18,
+                dp(16),
                 0,
-                18,
+                dp(16),
                 0
         );
 
         e.setBackground(
                 round(
                         INPUT,
-                        18
+                        17
                 )
         );
 
@@ -1362,9 +1337,9 @@ public class MainActivity extends Activity {
 
         b.setText(value);
 
-        b.setTextColor(WHITE);
+        b.setTextSize(15);
 
-        b.setTextSize(16);
+        b.setTextColor(WHITE);
 
         b.setTypeface(
                 Typeface.DEFAULT,
@@ -1382,9 +1357,9 @@ public class MainActivity extends Activity {
         b.setMinimumHeight(0);
 
         b.setPadding(
-                8,
+                dp(5),
                 0,
-                8,
+                dp(5),
                 0
         );
 
@@ -1409,7 +1384,7 @@ public class MainActivity extends Activity {
         Button b =
                 button(
                         value,
-                        DARK_BUTTON
+                        DARK
                 );
 
         b.setTextSize(12);
@@ -1432,7 +1407,7 @@ public class MainActivity extends Activity {
         d.setColor(color);
 
         d.setCornerRadius(
-                radius
+                dp(radius)
         );
 
         return d;
@@ -1442,7 +1417,13 @@ public class MainActivity extends Activity {
     // LAYOUT PARAMS
     // =========================================================
 
-    private LinearLayout.LayoutParams params(
+    private static final int MATCH =
+            LinearLayout.LayoutParams.MATCH_PARENT;
+
+    private static final int WRAP =
+            LinearLayout.LayoutParams.WRAP_CONTENT;
+
+    private LinearLayout.LayoutParams lp(
             int width,
             int height
     ) {
@@ -1457,20 +1438,34 @@ public class MainActivity extends Activity {
     // SPACE
     // =========================================================
 
-    private void space(
+    private void addSpace(
             LinearLayout layout,
-            int height
+            int size
     ) {
 
-        View v =
+        View space =
                 new View(this);
 
         layout.addView(
-                v,
+                space,
                 new LinearLayout.LayoutParams(
                         1,
-                        height
+                        dp(size)
                 )
+        );
+    }
+
+    // =========================================================
+    // DP CONVERSION
+    // =========================================================
+
+    private int dp(int value) {
+
+        return (int) (
+                value *
+                getResources()
+                        .getDisplayMetrics()
+                        .density
         );
     }
 
@@ -1543,8 +1538,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
 
-        if (timer != null) {
-            timer.cancel();
+        if (gameTimer != null) {
+            gameTimer.cancel();
         }
 
         super.onDestroy();
