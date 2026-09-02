@@ -8,14 +8,14 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
 import android.view.animation.ScaleAnimation;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.content.res.ColorStateList;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
 
@@ -33,16 +33,23 @@ public class MainActivity extends Activity {
     private TextView scoreText;
     private TextView timerText;
     private TextView messageText;
+    private TextView balanceText;
+    private TextView accountText;
 
     private Button coinButton;
     private Button rewardButton;
     private Button restartButton;
+    private Button signupButton;
 
     private int score = 0;
+    private int totalBalance = 0;
+
     private CountDownTimer countDownTimer;
 
     private InterstitialAd interstitialAd;
     private RewardedAd rewardedAd;
+
+    private SharedPreferences prefs;
 
     // Google TEST Ad IDs
     private static final String INTERSTITIAL_AD_ID =
@@ -55,6 +62,16 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        prefs = getSharedPreferences(
+                "CoinRushData",
+                MODE_PRIVATE
+        );
+
+        totalBalance = prefs.getInt(
+                "total_balance",
+                0
+        );
+
         createGameScreen();
 
         MobileAds.initialize(this, initializationStatus -> {
@@ -66,32 +83,65 @@ public class MainActivity extends Activity {
     }
 
     private int dp(int value) {
-        return (int) (value * getResources()
-                .getDisplayMetrics().density + 0.5f);
+        return (int) (
+                value * getResources()
+                        .getDisplayMetrics()
+                        .density + 0.5f
+        );
     }
 
     private GradientDrawable roundedBackground(
             int color,
-            int radius) {
+            int radius
+    ) {
+        GradientDrawable drawable =
+                new GradientDrawable();
 
-        GradientDrawable drawable = new GradientDrawable();
         drawable.setColor(color);
         drawable.setCornerRadius(dp(radius));
 
         return drawable;
     }
 
+    private GradientDrawable coinBackground() {
+
+        GradientDrawable drawable =
+                new GradientDrawable();
+
+        drawable.setShape(
+                GradientDrawable.OVAL
+        );
+
+        drawable.setColor(
+                Color.rgb(255, 152, 0)
+        );
+
+        drawable.setStroke(
+                dp(5),
+                Color.rgb(255, 195, 50)
+        );
+
+        return drawable;
+    }
+
     private void createGameScreen() {
 
-        LinearLayout mainLayout = new LinearLayout(this);
+        LinearLayout mainLayout =
+                new LinearLayout(this);
 
-        mainLayout.setOrientation(LinearLayout.VERTICAL);
-        mainLayout.setGravity(Gravity.CENTER_HORIZONTAL);
+        mainLayout.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        mainLayout.setGravity(
+                Gravity.CENTER_HORIZONTAL
+        );
+
         mainLayout.setPadding(
                 dp(18),
-                dp(20),
+                dp(15),
                 dp(18),
-                dp(20)
+                dp(15)
         );
 
         mainLayout.setBackgroundColor(
@@ -102,186 +152,30 @@ public class MainActivity extends Activity {
         // TITLE
         // =========================
 
-        TextView title = new TextView(this);
+        TextView title =
+                new TextView(this);
 
-        title.setText("🇮🇳 Coin Rush India");
-        title.setTextSize(32);
-        title.setTextColor(Color.WHITE);
+        title.setText(
+                "🇮🇳 Coin Rush India"
+        );
+
+        title.setTextSize(30);
+
+        title.setTextColor(
+                Color.WHITE
+        );
+
         title.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
-        title.setGravity(Gravity.CENTER);
+
+        title.setGravity(
+                Gravity.CENTER
+        );
 
         mainLayout.addView(
                 title,
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(70)
-                )
-        );
-
-        // SUBTITLE
-
-        TextView subtitle = new TextView(this);
-
-        subtitle.setText("TAP • COLLECT • RUSH!");
-        subtitle.setTextSize(17);
-        subtitle.setTextColor(
-                Color.rgb(210, 210, 220)
-        );
-        subtitle.setGravity(Gravity.CENTER);
-
-        LinearLayout.LayoutParams subtitleParams =
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(45)
-                );
-
-        subtitleParams.setMargins(
-                0,
-                dp(5),
-                0,
-                dp(12)
-        );
-
-        mainLayout.addView(
-                subtitle,
-                subtitleParams
-        );
-
-        // =========================
-        // SCORE CARD
-        // =========================
-
-        LinearLayout scoreCard =
-                new LinearLayout(this);
-
-        scoreCard.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        scoreCard.setGravity(Gravity.CENTER);
-
-        scoreCard.setBackground(
-                roundedBackground(
-                        Color.rgb(30, 33, 52),
-                        28
-                )
-        );
-
-        scoreText = new TextView(this);
-
-        scoreText.setText("0");
-        scoreText.setTextSize(50);
-        scoreText.setTextColor(Color.YELLOW);
-        scoreText.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-        scoreText.setGravity(Gravity.CENTER);
-
-        scoreCard.addView(
-                scoreText,
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(75)
-                )
-        );
-
-        TextView coinsLabel = new TextView(this);
-
-        coinsLabel.setText("COINS");
-        coinsLabel.setTextSize(16);
-        coinsLabel.setTextColor(
-                Color.rgb(220, 220, 225)
-        );
-        coinsLabel.setGravity(Gravity.CENTER);
-
-        scoreCard.addView(
-                coinsLabel,
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(40)
-                )
-        );
-
-        LinearLayout.LayoutParams scoreParams =
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(145)
-                );
-
-        scoreParams.setMargins(
-                dp(25),
-                0,
-                dp(25),
-                dp(18)
-        );
-
-        mainLayout.addView(
-                scoreCard,
-                scoreParams
-        );
-
-        // =========================
-        // TIMER
-        // =========================
-
-        timerText = new TextView(this);
-
-        timerText.setText("⏱️ 30");
-        timerText.setTextSize(25);
-        timerText.setTextColor(Color.WHITE);
-        timerText.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-        timerText.setGravity(Gravity.CENTER);
-
-        timerText.setBackground(
-                roundedBackground(
-                        Color.rgb(42, 45, 70),
-                        50
-                )
-        );
-
-        LinearLayout.LayoutParams timerParams =
-                new LinearLayout.LayoutParams(
-                        dp(250),
-                        dp(65)
-                );
-
-        timerParams.setMargins(
-                0,
-                0,
-                0,
-                dp(18)
-        );
-
-        mainLayout.addView(
-                timerText,
-                timerParams
-        );
-
-        // =========================
-        // MESSAGE
-        // =========================
-
-        messageText = new TextView(this);
-
-        messageText.setText(
-                "Tap the coin as fast as you can!"
-        );
-
-        messageText.setTextSize(18);
-        messageText.setTextColor(
-                Color.rgb(220, 220, 225)
-        );
-        messageText.setGravity(Gravity.CENTER);
-
-        mainLayout.addView(
-                messageText,
                 new LinearLayout.LayoutParams(
                         -1,
                         dp(60)
@@ -289,425 +183,222 @@ public class MainActivity extends Activity {
         );
 
         // =========================
-        // COIN BUTTON
+        // ACCOUNT ROW
         // =========================
 
-        coinButton = new Button(this);
+        LinearLayout accountRow =
+                new LinearLayout(this);
 
-        coinButton.setText("🪙\nTAP!");
-        coinButton.setTextSize(27);
-        coinButton.setTextColor(Color.WHITE);
-        coinButton.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
+        accountRow.setGravity(
+                Gravity.CENTER_VERTICAL
         );
 
-        coinButton.setGravity(Gravity.CENTER);
-
-        coinButton.setAllCaps(false);
-
-        coinButton.setBackground(
-                createCoinBackground()
-        );
-
-        coinButton.setElevation(dp(10));
-
-        LinearLayout.LayoutParams coinParams =
-                new LinearLayout.LayoutParams(
-                        dp(300),
-                        dp(300)
-                );
-
-        coinParams.setMargins(
+        accountRow.setPadding(
+                dp(12),
                 0,
-                dp(5),
-                0,
-                dp(25)
+                dp(12),
+                0
         );
 
-        mainLayout.addView(
-                coinButton,
-                coinParams
-        );
-
-        coinButton.setOnClickListener(v -> {
-
-            score++;
-
-            scoreText.setText(
-                    String.valueOf(score)
-            );
-
-            playTapAnimation();
-
-        });
-
-        // =========================
-        // REWARD BUTTON
-        // =========================
-
-        rewardButton = new Button(this);
-
-        rewardButton.setText(
-                "🎁  WATCH AD  •  2X COINS"
-        );
-
-        rewardButton.setTextSize(18);
-        rewardButton.setTextColor(Color.WHITE);
-        rewardButton.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        rewardButton.setAllCaps(false);
-
-        rewardButton.setBackground(
+        accountRow.setBackground(
                 roundedBackground(
-                        Color.rgb(45, 150, 55),
-                        30
+                        Color.rgb(35, 38, 58),
+                        25
                 )
         );
 
-        rewardButton.setVisibility(View.GONE);
+        accountText =
+                new TextView(this);
 
-        LinearLayout.LayoutParams rewardParams =
+        accountText.setText(
+                "👤 Guest"
+        );
+
+        accountText.setTextSize(16);
+
+        accountText.setTextColor(
+                Color.WHITE
+        );
+
+        accountRow.addView(
+                accountText,
+                new LinearLayout.LayoutParams(
+                        0,
+                        dp(50),
+                        1
+                )
+        );
+
+        signupButton =
+                new Button(this);
+
+        signupButton.setText(
+                "SIGN UP"
+        );
+
+        signupButton.setTextSize(14);
+
+        signupButton.setTextColor(
+                Color.WHITE
+        );
+
+        signupButton.setAllCaps(false);
+
+        signupButton.setBackground(
+                roundedBackground(
+                        Color.rgb(70, 90, 180),
+                        25
+                )
+        );
+
+        accountRow.addView(
+                signupButton,
+                new LinearLayout.LayoutParams(
+                        dp(110),
+                        dp(48)
+                )
+        );
+
+        LinearLayout.LayoutParams accountParams =
                 new LinearLayout.LayoutParams(
                         -1,
-                        dp(70)
+                        dp(55)
                 );
 
-        rewardParams.setMargins(
+        accountParams.setMargins(
                 0,
                 0,
                 0,
-                dp(15)
+                dp(10)
         );
 
         mainLayout.addView(
-                rewardButton,
-                rewardParams
+                accountRow,
+                accountParams
         );
 
-        rewardButton.setOnClickListener(
-                v -> showRewardedAd()
+        signupButton.setOnClickListener(
+                v -> showSignupDialog()
         );
 
         // =========================
-        // RESTART BUTTON
+        // TOTAL BALANCE
         // =========================
 
-        restartButton = new Button(this);
+        LinearLayout balanceCard =
+                new LinearLayout(this);
 
-        restartButton.setText(
-                "🔄  RESTART GAME"
+        balanceCard.setOrientation(
+                LinearLayout.VERTICAL
         );
 
-        restartButton.setTextSize(18);
-        restartButton.setTextColor(Color.WHITE);
-        restartButton.setTypeface(
+        balanceCard.setGravity(
+                Gravity.CENTER
+        );
+
+        balanceCard.setBackground(
+                roundedBackground(
+                        Color.rgb(30, 33, 52),
+                        25
+                )
+        );
+
+        TextView balanceLabel =
+                new TextView(this);
+
+        balanceLabel.setText(
+                "TOTAL BALANCE"
+        );
+
+        balanceLabel.setTextSize(15);
+
+        balanceLabel.setTextColor(
+                Color.LTGRAY
+        );
+
+        balanceLabel.setGravity(
+                Gravity.CENTER
+        );
+
+        balanceCard.addView(
+                balanceLabel,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(30)
+                )
+        );
+
+        balanceText =
+                new TextView(this);
+
+        balanceText.setText(
+                "🪙 " + totalBalance
+        );
+
+        balanceText.setTextSize(30);
+
+        balanceText.setTextColor(
+                Color.rgb(255, 215, 0)
+        );
+
+        balanceText.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
 
-        restartButton.setAllCaps(false);
-
-        restartButton.setBackground(
-                roundedBackground(
-                        Color.rgb(55, 65, 90),
-                        30
-                )
+        balanceText.setGravity(
+                Gravity.CENTER
         );
 
-        restartButton.setVisibility(View.GONE);
-
-        mainLayout.addView(
-                restartButton,
+        balanceCard.addView(
+                balanceText,
                 new LinearLayout.LayoutParams(
                         -1,
-                        dp(70)
+                        dp(50)
                 )
         );
 
-        restartButton.setOnClickListener(
-                v -> startGame()
-        );
-
-        setContentView(mainLayout);
-    }
-
-    private GradientDrawable createCoinBackground() {
-
-        GradientDrawable coin =
-                new GradientDrawable();
-
-        coin.setShape(
-                GradientDrawable.OVAL
-        );
-
-        coin.setColor(
-                Color.rgb(255, 152, 0)
-        );
-
-        coin.setStroke(
-                dp(5),
-                Color.rgb(255, 190, 40)
-        );
-
-        return coin;
-    }
-
-    private void playTapAnimation() {
-
-        ScaleAnimation animation =
-                new ScaleAnimation(
-                        1.0f,
-                        0.92f,
-                        1.0f,
-                        0.92f,
-                        Animation.RELATIVE_TO_SELF,
-                        0.5f,
-                        Animation.RELATIVE_TO_SELF,
-                        0.5f
+        LinearLayout.LayoutParams balanceParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(90)
                 );
 
-        animation.setDuration(80);
-
-        animation.setRepeatCount(1);
-
-        animation.setRepeatMode(
-                Animation.REVERSE
+        balanceParams.setMargins(
+                dp(15),
+                0,
+                dp(15),
+                dp(10)
         );
 
-        coinButton.startAnimation(animation);
-    }
-
-    private void startGame() {
-
-        score = 0;
-
-        scoreText.setText("0");
-
-        timerText.setText("⏱️ 30");
-
-        messageText.setText(
-                "Tap the coin as fast as you can!"
+        mainLayout.addView(
+                balanceCard,
+                balanceParams
         );
 
-        coinButton.setEnabled(true);
-        coinButton.setVisibility(View.VISIBLE);
+        // =========================
+        // SUBTITLE
+        // =========================
 
-        rewardButton.setVisibility(View.GONE);
+        TextView subtitle =
+                new TextView(this);
 
-        restartButton.setVisibility(View.GONE);
-
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-        }
-
-        countDownTimer =
-                new CountDownTimer(
-                        30000,
-                        1000
-                ) {
-
-                    @Override
-                    public void onTick(
-                            long millisUntilFinished) {
-
-                        long seconds =
-                                (millisUntilFinished + 999)
-                                        / 1000;
-
-                        timerText.setText(
-                                "⏱️ " + seconds
-                        );
-                    }
-
-                    @Override
-                    public void onFinish() {
-
-                        timerText.setText(
-                                "⏱️ 0"
-                        );
-
-                        coinButton.setEnabled(false);
-
-                        messageText.setText(
-                                "🎉 GAME OVER!\n"
-                                        + "You collected "
-                                        + score
-                                        + " coins!"
-                        );
-
-                        rewardButton.setVisibility(
-                                View.VISIBLE
-                        );
-
-                        restartButton.setVisibility(
-                                View.VISIBLE
-                        );
-
-                        showInterstitialAd();
-                    }
-                };
-
-        countDownTimer.start();
-    }
-
-    // =========================
-    // INTERSTITIAL AD
-    // =========================
-
-    private void loadInterstitialAd() {
-
-        AdRequest adRequest =
-                new AdRequest.Builder().build();
-
-        InterstitialAd.load(
-                this,
-                INTERSTITIAL_AD_ID,
-                adRequest,
-                new InterstitialAdLoadCallback() {
-
-                    @Override
-                    public void onAdLoaded(
-                            @NonNull InterstitialAd ad) {
-
-                        interstitialAd = ad;
-
-                        interstitialAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
-
-                                            @Override
-                                            public void
-                                            onAdDismissedFullScreenContent() {
-
-                                                interstitialAd =
-                                                        null;
-
-                                                loadInterstitialAd();
-                                            }
-                                        }
-                                );
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(
-                            @NonNull LoadAdError error) {
-
-                        interstitialAd = null;
-                    }
-                }
+        subtitle.setText(
+                "TAP • COLLECT • RUSH!"
         );
-    }
 
-    private void showInterstitialAd() {
+        subtitle.setTextSize(17);
 
-        if (interstitialAd != null) {
-
-            interstitialAd.show(this);
-
-        } else {
-
-            loadInterstitialAd();
-        }
-    }
-
-    // =========================
-    // REWARDED AD
-    // =========================
-
-    private void loadRewardedAd() {
-
-        AdRequest adRequest =
-                new AdRequest.Builder().build();
-
-        RewardedAd.load(
-                this,
-                REWARDED_AD_ID,
-                adRequest,
-                new RewardedAdLoadCallback() {
-
-                    @Override
-                    public void onAdLoaded(
-                            @NonNull RewardedAd ad) {
-
-                        rewardedAd = ad;
-
-                        rewardedAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
-
-                                            @Override
-                                            public void
-                                            onAdDismissedFullScreenContent() {
-
-                                                rewardedAd =
-                                                        null;
-
-                                                loadRewardedAd();
-                                            }
-                                        }
-                                );
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(
-                            @NonNull LoadAdError error) {
-
-                        rewardedAd = null;
-                    }
-                }
+        subtitle.setTextColor(
+                Color.LTGRAY
         );
-    }
 
-    private void showRewardedAd() {
+        subtitle.setGravity(
+                Gravity.CENTER
+        );
 
-        if (rewardedAd != null) {
-
-            rewardedAd.show(
-                    this,
-                    rewardItem -> {
-
-                        score = score * 2;
-
-                        scoreText.setText(
-                                String.valueOf(score)
-                        );
-
-                        messageText.setText(
-                                "🎉 REWARD!\n"
-                                        + "Coins doubled!"
-                        );
-
-                        Toast.makeText(
-                                MainActivity.this,
-                                "Coins 2X! 🎉",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    }
-            );
-
-        } else {
-
-            Toast.makeText(
-                    this,
-                    "Reward ad is loading...",
-                    Toast.LENGTH_SHORT
-            ).show();
-
-            loadRewardedAd();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-        }
-
-        super.onDestroy();
-    }
-}
+        mainLayout.addView(
+                subtitle,
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp
