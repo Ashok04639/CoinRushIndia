@@ -1,10 +1,14 @@
 package com.coinrushindia.prototype;
 
 import android.app.Activity;
-import android.os.Bundle;
-import android.os.CountDownTimer;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -29,7 +33,11 @@ import java.security.MessageDigest;
 
 public class MainActivity extends Activity {
 
-    private android.content.SharedPreferences prefs;
+    // =========================
+    // APP DATA
+    // =========================
+
+    private SharedPreferences prefs;
 
     private String username = "";
 
@@ -39,9 +47,11 @@ public class MainActivity extends Activity {
 
     private boolean gameRunning = false;
 
-    private int timeLeft = 30;
-
     private CountDownTimer timer;
+
+    // =========================
+    // UI
+    // =========================
 
     private TextView scoreText;
     private TextView bestText;
@@ -54,16 +64,24 @@ public class MainActivity extends Activity {
     private Button restartButton;
     private Button logoutButton;
 
+    // =========================
+    // ADMOB
+    // =========================
+
     private InterstitialAd interstitialAd;
     private RewardedAd rewardedAd;
 
-    // LIVE ADMOB INTERSTITIAL
+    private boolean adsInitialized = false;
+
     private static final String INTERSTITIAL_AD_ID =
             "ca-app-pub-459015901387755/9228973931";
 
-    // LIVE ADMOB REWARDED
     private static final String REWARDED_AD_ID =
             "ca-app-pub-459015901387755/5227139421";
+
+    // =========================
+    // COLORS
+    // =========================
 
     private final int BG =
             Color.rgb(12, 18, 28);
@@ -89,109 +107,173 @@ public class MainActivity extends Activity {
     private final int YELLOW =
             Color.rgb(255, 215, 60);
 
+    // =========================
+    // ON CREATE
+    // =========================
 
     @Override
-protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-    TextView test = new TextView(this);
-
-    test.setText("🇮🇳 Coin Rush India\n\nAPP START TEST OK");
-    test.setTextSize(28);
-    test.setTextColor(Color.WHITE);
-    test.setGravity(Gravity.CENTER);
-    test.setBackgroundColor(BG);
-
-    setContentView(test);
-}
-
-
-
-
-    // =========================================================
-    // ADMOB INITIALIZATION
-    // =========================================================
-
-    private void initializeAds() {
-
-        MobileAds.initialize(
-                this,
-                initializationStatus -> {
-
-                    loadInterstitialAd();
-
-                    loadRewardedAd();
-                }
+        prefs = getSharedPreferences(
+                "CoinRushIndia",
+                MODE_PRIVATE
         );
+
+        username = prefs.getString(
+                "username",
+                ""
+        );
+
+        bestScore = prefs.getInt(
+                "bestScore",
+                0
+        );
+
+        totalCoins = prefs.getInt(
+                "totalCoins",
+                0
+        );
+
+        boolean loggedIn =
+                prefs.getBoolean(
+                        "loggedIn",
+                        false
+                );
+
+        // पहले UI दिखाएँ
+        if (loggedIn && !username.isEmpty()) {
+            showGameScreen();
+        } else {
+            showLoginScreen();
+        }
+
+        // UI आने के बाद Ads initialize करें
+        new Handler(Looper.getMainLooper())
+                .postDelayed(
+                        this::initializeAdsSafely,
+                        1500
+                );
     }
 
+    // =========================
+    // ADMOB INITIALIZATION
+    // =========================
 
-    // =========================================================
-    // INTERSTITIAL AD
-    // =========================================================
+    private void initializeAdsSafely() {
 
-    private void loadInterstitialAd() {
-
-        if (isFinishing() || isDestroyed()) {
+        if (isFinishing()) {
             return;
         }
 
-        AdRequest request =
-                new AdRequest.Builder().build();
+        try {
 
-        InterstitialAd.load(
-                this,
-                INTERSTITIAL_AD_ID,
-                request,
-                new InterstitialAdLoadCallback() {
+            MobileAds.initialize(
+                    this,
+                    initializationStatus -> {
 
-                    @Override
-                    public void onAdLoaded(
-                            InterstitialAd ad) {
+                        adsInitialized = true;
 
-                        interstitialAd = ad;
-
-                        interstitialAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
-
-                                            @Override
-                                            public void onAdDismissedFullScreenContent() {
-
-                                                interstitialAd = null;
-
-                                                loadInterstitialAd();
-                                            }
-
-                                            @Override
-                                            public void onAdFailedToShowFullScreenContent(
-                                                    AdError adError) {
-
-                                                interstitialAd = null;
-
-                                                loadInterstitialAd();
-                                            }
-                                        }
-                                );
+                        loadInterstitialAd();
+                        loadRewardedAd();
                     }
+            );
 
+        } catch (Exception e) {
 
-                    @Override
-                    public void onAdFailedToLoad(
-                            LoadAdError error) {
-
-                        interstitialAd = null;
-                    }
-                }
-        );
+            adsInitialized = false;
+        }
     }
 
+    // =========================
+    // INTERSTITIAL LOAD
+    // =========================
+
+    private void loadInterstitialAd() {
+
+        if (!adsInitialized) {
+            return;
+        }
+
+        if (isFinishing()) {
+            return;
+        }
+
+        try {
+
+            AdRequest request =
+                    new AdRequest.Builder().build();
+
+            InterstitialAd.load(
+                    this,
+                    INTERSTITIAL_AD_ID,
+                    request,
+                    new InterstitialAdLoadCallback() {
+
+                        @Override
+                        public void onAdLoaded(
+                                InterstitialAd ad) {
+
+                            interstitialAd = ad;
+
+                            interstitialAd
+                                    .setFullScreenContentCallback(
+                                            new FullScreenContentCallback() {
+
+                                                @Override
+                                                public void onAdDismissedFullScreenContent() {
+
+                                                    interstitialAd =
+                                                            null;
+
+                                                    loadInterstitialAd();
+                                                }
+
+                                                @Override
+                                                public void onAdFailedToShowFullScreenContent(
+                                                        AdError adError) {
+
+                                                    interstitialAd =
+                                                            null;
+
+                                                    loadInterstitialAd();
+                                                }
+                                            }
+                                    );
+                        }
+
+                        @Override
+                        public void onAdFailedToLoad(
+                                LoadAdError error) {
+
+                            interstitialAd = null;
+                        }
+                    }
+            );
+
+        } catch (Exception e) {
+
+            interstitialAd = null;
+        }
+    }
+
+    // =========================
+    // SHOW INTERSTITIAL
+    // =========================
 
     private void showInterstitialAd() {
 
         if (interstitialAd != null) {
 
-            interstitialAd.show(this);
+            try {
+
+                interstitialAd.show(this);
+
+            } catch (Exception e) {
+
+                interstitialAd = null;
+                loadInterstitialAd();
+            }
 
         } else {
 
@@ -199,67 +281,81 @@ protected void onCreate(Bundle savedInstanceState) {
         }
     }
 
-
-    // =========================================================
-    // REWARDED AD
-    // =========================================================
+    // =========================
+    // REWARDED LOAD
+    // =========================
 
     private void loadRewardedAd() {
 
-        if (isFinishing() || isDestroyed()) {
+        if (!adsInitialized) {
             return;
         }
 
-        AdRequest request =
-                new AdRequest.Builder().build();
+        if (isFinishing()) {
+            return;
+        }
 
-        RewardedAd.load(
-                this,
-                REWARDED_AD_ID,
-                request,
-                new RewardedAdLoadCallback() {
+        try {
 
-                    @Override
-                    public void onAdLoaded(
-                            RewardedAd ad) {
+            AdRequest request =
+                    new AdRequest.Builder().build();
 
-                        rewardedAd = ad;
+            RewardedAd.load(
+                    this,
+                    REWARDED_AD_ID,
+                    request,
+                    new RewardedAdLoadCallback() {
 
-                        rewardedAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
+                        @Override
+                        public void onAdLoaded(
+                                RewardedAd ad) {
 
-                                            @Override
-                                            public void onAdDismissedFullScreenContent() {
+                            rewardedAd = ad;
 
-                                                rewardedAd = null;
+                            rewardedAd
+                                    .setFullScreenContentCallback(
+                                            new FullScreenContentCallback() {
 
-                                                loadRewardedAd();
+                                                @Override
+                                                public void onAdDismissedFullScreenContent() {
+
+                                                    rewardedAd =
+                                                            null;
+
+                                                    loadRewardedAd();
+                                                }
+
+                                                @Override
+                                                public void onAdFailedToShowFullScreenContent(
+                                                        AdError adError) {
+
+                                                    rewardedAd =
+                                                            null;
+
+                                                    loadRewardedAd();
+                                                }
                                             }
+                                    );
+                        }
 
-                                            @Override
-                                            public void onAdFailedToShowFullScreenContent(
-                                                    AdError adError) {
+                        @Override
+                        public void onAdFailedToLoad(
+                                LoadAdError error) {
 
-                                                rewardedAd = null;
-
-                                                loadRewardedAd();
-                                            }
-                                        }
-                                );
+                            rewardedAd = null;
+                        }
                     }
+            );
 
+        } catch (Exception e) {
 
-                    @Override
-                    public void onAdFailedToLoad(
-                            LoadAdError error) {
-
-                        rewardedAd = null;
-                    }
-                }
-        );
+            rewardedAd = null;
+        }
     }
 
+    // =========================
+    // SHOW REWARDED
+    // =========================
 
     private void showRewardedAd() {
 
@@ -276,24 +372,30 @@ protected void onCreate(Bundle savedInstanceState) {
             return;
         }
 
-        RewardedAd adToShow =
+        RewardedAd ad =
                 rewardedAd;
 
         rewardedAd = null;
 
-        adToShow.show(
-                this,
-                rewardItem -> {
+        try {
 
-                    giveDoubleCoins();
-                }
-        );
+            ad.show(
+                    this,
+                    rewardItem -> {
+
+                        giveDoubleCoins();
+                    }
+            );
+
+        } catch (Exception e) {
+
+            loadRewardedAd();
+        }
     }
 
-
-    // =========================================================
+    // =========================
     // LOGIN SCREEN
-    // =========================================================
+    // =========================
 
     private void showLoginScreen() {
 
@@ -301,7 +403,6 @@ protected void onCreate(Bundle savedInstanceState) {
 
         LinearLayout root =
                 createRoot();
-
 
         TextView title =
                 createText(
@@ -312,7 +413,6 @@ protected void onCreate(Bundle savedInstanceState) {
                 );
 
         root.addView(title);
-
 
         TextView subtitle =
                 createText(
@@ -333,23 +433,24 @@ protected void onCreate(Bundle savedInstanceState) {
 
         root.addView(subtitle);
 
-
         EditText usernameInput =
-                createInput("Username");
+                createInput(
+                        "Username"
+                );
 
         root.addView(usernameInput);
 
-
         EditText passwordInput =
-                createInput("Password");
+                createInput(
+                        "Password"
+                );
 
         passwordInput.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                InputType.TYPE_CLASS_TEXT
+                        | InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
 
         root.addView(passwordInput);
-
 
         Button loginButton =
                 createButton(
@@ -359,7 +460,6 @@ protected void onCreate(Bundle savedInstanceState) {
 
         root.addView(loginButton);
 
-
         Button signupButton =
                 createButton(
                         "CREATE NEW ACCOUNT",
@@ -368,101 +468,93 @@ protected void onCreate(Bundle savedInstanceState) {
 
         root.addView(signupButton);
 
+        loginButton.setOnClickListener(
+                v -> {
 
-        loginButton.setOnClickListener(v -> {
+                    String user =
+                            usernameInput
+                                    .getText()
+                                    .toString()
+                                    .trim();
 
-            String user =
-                    usernameInput
-                            .getText()
-                            .toString()
-                            .trim();
+                    String pass =
+                            passwordInput
+                                    .getText()
+                                    .toString();
 
-            String pass =
-                    passwordInput
-                            .getText()
-                            .toString();
+                    if (user.isEmpty()
+                            || pass.isEmpty()) {
 
+                        Toast.makeText(
+                                this,
+                                "Username aur password bharo",
+                                Toast.LENGTH_SHORT
+                        ).show();
 
-            if (user.isEmpty()
-                    || pass.isEmpty()) {
+                        return;
+                    }
 
-                Toast.makeText(
-                        this,
-                        "Username aur password bharo",
-                        Toast.LENGTH_SHORT
-                ).show();
+                    String savedUser =
+                            prefs.getString(
+                                    "username",
+                                    ""
+                            );
 
-                return;
-            }
+                    String savedPassword =
+                            prefs.getString(
+                                    "password",
+                                    ""
+                            );
 
+                    if (savedUser.isEmpty()) {
 
-            String savedUser =
-                    prefs.getString(
-                            "username",
-                            ""
-                    );
+                        Toast.makeText(
+                                this,
+                                "Pehle account create karo",
+                                Toast.LENGTH_SHORT
+                        ).show();
 
-            String savedPassword =
-                    prefs.getString(
-                            "password",
-                            ""
-                    );
+                        return;
+                    }
 
+                    if (savedUser.equals(user)
+                            && savedPassword.equals(
+                            hashPassword(pass))) {
 
-            if (savedUser.isEmpty()) {
+                        prefs.edit()
+                                .putBoolean(
+                                        "loggedIn",
+                                        true
+                                )
+                                .apply();
 
-                Toast.makeText(
-                        this,
-                        "Pehle account create karo",
-                        Toast.LENGTH_SHORT
-                ).show();
+                        username = user;
 
-                return;
-            }
+                        showGameScreen();
 
+                    } else {
 
-            if (savedUser.equals(user)
-                    && savedPassword.equals(
-                            hashPassword(pass)
-                    )) {
-
-                prefs.edit()
-                        .putBoolean(
-                                "loggedIn",
-                                true
-                        )
-                        .apply();
-
-                username = user;
-
-                showGameScreen();
-
-            } else {
-
-                Toast.makeText(
-                        this,
-                        "Username ya password galat hai",
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-
-        });
-
+                        Toast.makeText(
+                                this,
+                                "Username ya password galat hai",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                }
+        );
 
         signupButton.setOnClickListener(
                 v -> showSignupScreen()
         );
-
 
         setContentView(
                 wrapScroll(root)
         );
     }
 
-
-    // =========================================================
+    // =========================
     // SIGNUP SCREEN
-    // =========================================================
+    // =========================
 
     private void showSignupScreen() {
 
@@ -470,7 +562,6 @@ protected void onCreate(Bundle savedInstanceState) {
 
         LinearLayout root =
                 createRoot();
-
 
         TextView title =
                 createText(
@@ -481,7 +572,6 @@ protected void onCreate(Bundle savedInstanceState) {
                 );
 
         root.addView(title);
-
 
         TextView subtitle =
                 createText(
@@ -502,7 +592,6 @@ protected void onCreate(Bundle savedInstanceState) {
 
         root.addView(subtitle);
 
-
         EditText usernameInput =
                 createInput(
                         "Choose Username"
@@ -510,19 +599,17 @@ protected void onCreate(Bundle savedInstanceState) {
 
         root.addView(usernameInput);
 
-
         EditText passwordInput =
                 createInput(
                         "Choose Password"
                 );
 
         passwordInput.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                InputType.TYPE_CLASS_TEXT
+                        | InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
 
         root.addView(passwordInput);
-
 
         EditText confirmInput =
                 createInput(
@@ -530,12 +617,11 @@ protected void onCreate(Bundle savedInstanceState) {
                 );
 
         confirmInput.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                InputType.TYPE_CLASS_TEXT
+                        | InputType.TYPE_TEXT_VARIATION_PASSWORD
         );
 
         root.addView(confirmInput);
-
 
         Button createButton =
                 createButton(
@@ -545,7 +631,6 @@ protected void onCreate(Bundle savedInstanceState) {
 
         root.addView(createButton);
 
-
         Button backButton =
                 createButton(
                         "BACK TO LOGIN",
@@ -554,152 +639,137 @@ protected void onCreate(Bundle savedInstanceState) {
 
         root.addView(backButton);
 
+        createButton.setOnClickListener(
+                v -> {
 
-        createButton.setOnClickListener(v -> {
+                    String user =
+                            usernameInput
+                                    .getText()
+                                    .toString()
+                                    .trim();
 
-            String user =
-                    usernameInput
-                            .getText()
-                            .toString()
-                            .trim();
+                    String pass =
+                            passwordInput
+                                    .getText()
+                                    .toString();
 
-            String pass =
-                    passwordInput
-                            .getText()
-                            .toString();
+                    String confirm =
+                            confirmInput
+                                    .getText()
+                                    .toString();
 
-            String confirm =
-                    confirmInput
-                            .getText()
-                            .toString();
+                    if (user.isEmpty()
+                            || pass.isEmpty()
+                            || confirm.isEmpty()) {
 
+                        Toast.makeText(
+                                this,
+                                "Sabhi details bharo",
+                                Toast.LENGTH_SHORT
+                        ).show();
 
-            if (user.isEmpty()
-                    || pass.isEmpty()
-                    || confirm.isEmpty()) {
+                        return;
+                    }
 
-                Toast.makeText(
-                        this,
-                        "Sabhi details bharo",
-                        Toast.LENGTH_SHORT
-                ).show();
+                    if (user.length() < 3) {
 
-                return;
-            }
+                        Toast.makeText(
+                                this,
+                                "Username kam se kam 3 characters ka ho",
+                                Toast.LENGTH_SHORT
+                        ).show();
 
+                        return;
+                    }
 
-            if (user.length() < 3) {
+                    if (pass.length() < 4) {
 
-                Toast.makeText(
-                        this,
-                        "Username kam se kam 3 characters ka ho",
-                        Toast.LENGTH_SHORT
-                ).show();
+                        Toast.makeText(
+                                this,
+                                "Password kam se kam 4 characters ka ho",
+                                Toast.LENGTH_SHORT
+                        ).show();
 
-                return;
-            }
+                        return;
+                    }
 
+                    if (!pass.equals(confirm)) {
 
-            if (pass.length() < 4) {
+                        Toast.makeText(
+                                this,
+                                "Passwords match nahi kar rahe",
+                                Toast.LENGTH_SHORT
+                        ).show();
 
-                Toast.makeText(
-                        this,
-                        "Password kam se kam 4 characters ka ho",
-                        Toast.LENGTH_SHORT
-                ).show();
+                        return;
+                    }
 
-                return;
-            }
+                    String existingUser =
+                            prefs.getString(
+                                    "username",
+                                    ""
+                            );
 
+                    if (!existingUser.isEmpty()) {
 
-            if (!pass.equals(confirm)) {
+                        Toast.makeText(
+                                this,
+                                "Account already bana hua hai",
+                                Toast.LENGTH_SHORT
+                        ).show();
 
-                Toast.makeText(
-                        this,
-                        "Passwords match nahi kar rahe",
-                        Toast.LENGTH_SHORT
-                ).show();
+                        return;
+                    }
 
-                return;
-            }
+                    prefs.edit()
+                            .putString(
+                                    "username",
+                                    user
+                            )
+                            .putString(
+                                    "password",
+                                    hashPassword(pass)
+                            )
+                            .putBoolean(
+                                    "loggedIn",
+                                    true
+                            )
+                            .putInt(
+                                    "bestScore",
+                                    0
+                            )
+                            .putInt(
+                                    "totalCoins",
+                                    0
+                            )
+                            .apply();
 
+                    username = user;
+                    bestScore = 0;
+                    totalCoins = 0;
 
-            String existingUser =
-                    prefs.getString(
-                            "username",
-                            ""
-                    );
+                    Toast.makeText(
+                            this,
+                            "Account created!",
+                            Toast.LENGTH_SHORT
+                    ).show();
 
-
-            if (!existingUser.isEmpty()) {
-
-                Toast.makeText(
-                        this,
-                        "Account already bana hua hai",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                return;
-            }
-
-
-            prefs.edit()
-                    .putString(
-                            "username",
-                            user
-                    )
-                    .putString(
-                            "password",
-                            hashPassword(pass)
-                    )
-                    .putBoolean(
-                            "loggedIn",
-                            true
-                    )
-                    .putInt(
-                            "bestScore",
-                            0
-                    )
-                    .putInt(
-                            "totalCoins",
-                            0
-                    )
-                    .apply();
-
-
-            username = user;
-
-            bestScore = 0;
-
-            totalCoins = 0;
-
-
-            Toast.makeText(
-                    this,
-                    "Account created!",
-                    Toast.LENGTH_SHORT
-            ).show();
-
-
-            showGameScreen();
-
-        });
-
+                    showGameScreen();
+                }
+        );
 
         backButton.setOnClickListener(
                 v -> showLoginScreen()
         );
-
 
         setContentView(
                 wrapScroll(root)
         );
     }
 
-
-    // =========================================================
+    // =========================
     // GAME SCREEN
-    // =========================================================
+    // =========================
 
     private void showGameScreen() {
 
@@ -708,7 +778,7 @@ protected void onCreate(Bundle savedInstanceState) {
         LinearLayout root =
                 createRoot();
 
-
+        // TOP ROW
         LinearLayout topRow =
                 new LinearLayout(this);
 
@@ -720,7 +790,6 @@ protected void onCreate(Bundle savedInstanceState) {
                 Gravity.CENTER_VERTICAL
         );
 
-
         TextView title =
                 createText(
                         "🇮🇳 Coin Rush India",
@@ -728,7 +797,6 @@ protected void onCreate(Bundle savedInstanceState) {
                         WHITE,
                         true
                 );
-
 
         topRow.addView(
                 title,
@@ -739,13 +807,11 @@ protected void onCreate(Bundle savedInstanceState) {
                 )
         );
 
-
         logoutButton =
                 createButton(
                         "LOGOUT",
                         RED
                 );
-
 
         LinearLayout.LayoutParams logoutParams =
                 new LinearLayout.LayoutParams(
@@ -753,16 +819,14 @@ protected void onCreate(Bundle savedInstanceState) {
                         dp(50)
                 );
 
-
         topRow.addView(
                 logoutButton,
                 logoutParams
         );
 
-
         root.addView(topRow);
 
-
+        // PLAYER
         TextView playerText =
                 createText(
                         "Player: " + username,
@@ -771,11 +835,9 @@ protected void onCreate(Bundle savedInstanceState) {
                         false
                 );
 
-
         playerText.setGravity(
                 Gravity.CENTER
         );
-
 
         playerText.setLayoutParams(
                 marginParams(
@@ -786,12 +848,9 @@ protected void onCreate(Bundle savedInstanceState) {
                 )
         );
 
-
         root.addView(playerText);
 
-
         // SCORE CARD
-
         LinearLayout scoreCard =
                 new LinearLayout(this);
 
@@ -814,7 +873,6 @@ protected void onCreate(Bundle savedInstanceState) {
                 CARD
         );
 
-
         scoreText =
                 createText(
                         "0 COINS",
@@ -824,7 +882,6 @@ protected void onCreate(Bundle savedInstanceState) {
                 );
 
         scoreCard.addView(scoreText);
-
 
         bestText =
                 createText(
@@ -836,7 +893,6 @@ protected void onCreate(Bundle savedInstanceState) {
 
         scoreCard.addView(bestText);
 
-
         totalText =
                 createText(
                         "TOTAL COINS: " + totalCoins,
@@ -847,7 +903,6 @@ protected void onCreate(Bundle savedInstanceState) {
 
         scoreCard.addView(totalText);
 
-
         root.addView(
                 scoreCard,
                 new LinearLayout.LayoutParams(
@@ -856,9 +911,7 @@ protected void onCreate(Bundle savedInstanceState) {
                 )
         );
 
-
         // TIMER
-
         timerText =
                 createText(
                         "⏱ 30",
@@ -867,11 +920,9 @@ protected void onCreate(Bundle savedInstanceState) {
                         true
                 );
 
-
         timerText.setGravity(
                 Gravity.CENTER
         );
-
 
         timerText.setLayoutParams(
                 marginParams(
@@ -882,12 +933,9 @@ protected void onCreate(Bundle savedInstanceState) {
                 )
         );
 
-
         root.addView(timerText);
 
-
         // MESSAGE
-
         messageText =
                 createText(
                         "TAP • COLLECT • RUSH!",
@@ -896,26 +944,20 @@ protected void onCreate(Bundle savedInstanceState) {
                         true
                 );
 
-
         messageText.setGravity(
                 Gravity.CENTER
         );
 
-
         root.addView(messageText);
 
-
         // TAP BUTTON
-
         tapButton =
                 createButton(
                         "🪙\nTAP!",
                         ORANGE
                 );
 
-
         tapButton.setTextSize(26);
-
 
         LinearLayout.LayoutParams tapParams =
                 new LinearLayout.LayoutParams(
@@ -923,10 +965,8 @@ protected void onCreate(Bundle savedInstanceState) {
                         dp(180)
                 );
 
-
         tapParams.gravity =
                 Gravity.CENTER;
-
 
         tapParams.setMargins(
                 0,
@@ -935,44 +975,38 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(15)
         );
 
-
         root.addView(
                 tapButton,
                 tapParams
         );
 
+        tapButton.setOnClickListener(
+                v -> {
 
-        tapButton.setOnClickListener(v -> {
+                    if (!gameRunning) {
+                        return;
+                    }
 
-            if (!gameRunning) {
-                return;
-            }
+                    coins++;
 
-            coins++;
-
-            updateScore();
-
-        });
-
+                    updateScore();
+                }
+        );
 
         // REWARD BUTTON
-
         rewardButton =
                 createButton(
                         "🎁 WATCH AD • 2X COINS",
                         GREEN
                 );
 
-
         rewardButton.setTextSize(15);
-
 
         LinearLayout.LayoutParams rewardParams =
                 new LinearLayout.LayoutParams(
                         -1,
                         dp(58)
                 );
-
 
         rewardParams.setMargins(
                 0,
@@ -981,25 +1015,20 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(5)
         );
 
-
         root.addView(
                 rewardButton,
                 rewardParams
         );
 
-
         rewardButton.setVisibility(
                 View.GONE
         );
-
 
         rewardButton.setOnClickListener(
                 v -> showRewardedAd()
         );
 
-
         // RESTART BUTTON
-
         restartButton =
                 createButton(
                         "RESTART GAME",
@@ -1010,13 +1039,11 @@ protected void onCreate(Bundle savedInstanceState) {
                         )
                 );
 
-
         LinearLayout.LayoutParams restartParams =
                 new LinearLayout.LayoutParams(
                         -1,
                         dp(58)
                 );
-
 
         restartParams.setMargins(
                 0,
@@ -1025,55 +1052,48 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(10)
         );
 
-
         root.addView(
                 restartButton,
                 restartParams
         );
 
-
         restartButton.setVisibility(
                 View.GONE
         );
-
 
         restartButton.setOnClickListener(
                 v -> startGame()
         );
 
-
         // LOGOUT
+        logoutButton.setOnClickListener(
+                v -> {
 
-        logoutButton.setOnClickListener(v -> {
+                    stopTimer();
 
-            stopTimer();
+                    prefs.edit()
+                            .putBoolean(
+                                    "loggedIn",
+                                    false
+                            )
+                            .apply();
 
-            prefs.edit()
-                    .putBoolean(
-                            "loggedIn",
-                            false
-                    )
-                    .apply();
+                    username = "";
 
-            username = "";
-
-            showLoginScreen();
-
-        });
-
+                    showLoginScreen();
+                }
+        );
 
         setContentView(
                 wrapScroll(root)
         );
 
-
         startGame();
     }
 
-
-    // =========================================================
+    // =========================
     // START GAME
-    // =========================================================
+    // =========================
 
     private void startGame() {
 
@@ -1081,60 +1101,47 @@ protected void onCreate(Bundle savedInstanceState) {
 
         coins = 0;
 
-        timeLeft = 30;
-
         gameRunning = true;
 
-
         if (scoreText != null) {
-
             scoreText.setText(
                     "0 COINS"
             );
         }
 
-
         if (timerText != null) {
-
             timerText.setText(
                     "⏱ 30"
             );
         }
 
-
         if (messageText != null) {
-
             messageText.setText(
                     "TAP • COLLECT • RUSH!"
             );
         }
 
-
         if (tapButton != null) {
-
             tapButton.setVisibility(
                     View.VISIBLE
             );
 
-            tapButton.setEnabled(true);
+            tapButton.setEnabled(
+                    true
+            );
         }
 
-
         if (rewardButton != null) {
-
             rewardButton.setVisibility(
                     View.GONE
             );
         }
 
-
         if (restartButton != null) {
-
             restartButton.setVisibility(
                     View.GONE
             );
         }
-
 
         timer =
                 new CountDownTimer(
@@ -1146,52 +1153,44 @@ protected void onCreate(Bundle savedInstanceState) {
                     public void onTick(
                             long millisUntilFinished) {
 
-                        timeLeft =
-                                (int)
-                                        Math.ceil(
-                                                millisUntilFinished
-                                                        / 1000.0
-                                        );
-
+                        long seconds =
+                                (millisUntilFinished
+                                        + 999)
+                                        / 1000;
 
                         if (timerText != null) {
 
                             timerText.setText(
-                                    "⏱ " + timeLeft
+                                    "⏱ " + seconds
                             );
                         }
                     }
 
-
                     @Override
                     public void onFinish() {
 
-                        timeLeft = 0;
+                        if (!gameRunning) {
+                            return;
+                        }
 
                         gameRunning = false;
 
-
                         if (timerText != null) {
-
                             timerText.setText(
                                     "⏱ 0"
                             );
                         }
 
-
                         gameOver();
                     }
-
                 };
-
 
         timer.start();
     }
 
-
-    // =========================================================
+    // =========================
     // GAME OVER
-    // =========================================================
+    // =========================
 
     private void gameOver() {
 
@@ -1199,16 +1198,16 @@ protected void onCreate(Bundle savedInstanceState) {
 
         gameRunning = false;
 
-
         if (tapButton != null) {
 
-            tapButton.setEnabled(false);
+            tapButton.setEnabled(
+                    false
+            );
 
             tapButton.setVisibility(
                     View.GONE
             );
         }
-
 
         if (messageText != null) {
 
@@ -1219,9 +1218,7 @@ protected void onCreate(Bundle savedInstanceState) {
             );
         }
 
-
         // BEST SCORE
-
         if (coins > bestScore) {
 
             bestScore = coins;
@@ -1234,11 +1231,8 @@ protected void onCreate(Bundle savedInstanceState) {
                     .apply();
         }
 
-
         // TOTAL COINS
-
         totalCoins += coins;
-
 
         prefs.edit()
                 .putInt(
@@ -1247,9 +1241,7 @@ protected void onCreate(Bundle savedInstanceState) {
                 )
                 .apply();
 
-
         updateScore();
-
 
         if (bestText != null) {
 
@@ -1257,7 +1249,6 @@ protected void onCreate(Bundle savedInstanceState) {
                     "BEST: " + bestScore
             );
         }
-
 
         if (totalText != null) {
 
@@ -1267,14 +1258,12 @@ protected void onCreate(Bundle savedInstanceState) {
             );
         }
 
-
         if (rewardButton != null) {
 
             rewardButton.setVisibility(
                     View.VISIBLE
             );
         }
-
 
         if (restartButton != null) {
 
@@ -1283,16 +1272,13 @@ protected void onCreate(Bundle savedInstanceState) {
             );
         }
 
-
-        // SHOW INTERSTITIAL
-
+        // Interstitial
         showInterstitialAd();
     }
 
-
-    // =========================================================
-    // DOUBLE COINS
-    // =========================================================
+    // =========================
+    // REWARD
+    // =========================
 
     private void giveDoubleCoins() {
 
@@ -1307,39 +1293,31 @@ protected void onCreate(Bundle savedInstanceState) {
             return;
         }
 
+        int bonus =
+                coins;
 
-        int bonus = coins;
-
-
-        coins = coins * 2;
-
+        coins =
+                coins * 2;
 
         totalCoins += bonus;
 
+        if (coins > bestScore) {
+
+            bestScore = coins;
+        }
 
         prefs.edit()
+                .putInt(
+                        "bestScore",
+                        bestScore
+                )
                 .putInt(
                         "totalCoins",
                         totalCoins
                 )
                 .apply();
 
-
-        if (coins > bestScore) {
-
-            bestScore = coins;
-
-            prefs.edit()
-                    .putInt(
-                            "bestScore",
-                            bestScore
-                    )
-                    .apply();
-        }
-
-
         updateScore();
-
 
         if (bestText != null) {
 
@@ -1347,7 +1325,6 @@ protected void onCreate(Bundle savedInstanceState) {
                     "BEST: " + bestScore
             );
         }
-
 
         if (totalText != null) {
 
@@ -1357,14 +1334,12 @@ protected void onCreate(Bundle savedInstanceState) {
             );
         }
 
-
         if (messageText != null) {
 
             messageText.setText(
                     "🎁 REWARD! Coins doubled!"
             );
         }
-
 
         Toast.makeText(
                 this,
@@ -1373,10 +1348,9 @@ protected void onCreate(Bundle savedInstanceState) {
         ).show();
     }
 
-
-    // =========================================================
-    // SCORE
-    // =========================================================
+    // =========================
+    // UPDATE SCORE
+    // =========================
 
     private void updateScore() {
 
@@ -1388,26 +1362,22 @@ protected void onCreate(Bundle savedInstanceState) {
         }
     }
 
-
-    // =========================================================
-    // ROOT LAYOUT
-    // =========================================================
+    // =========================
+    // ROOT
+    // =========================
 
     private LinearLayout createRoot() {
 
         LinearLayout root =
                 new LinearLayout(this);
 
-
         root.setOrientation(
                 LinearLayout.VERTICAL
         );
 
-
         root.setGravity(
                 Gravity.CENTER_HORIZONTAL
         );
-
 
         root.setPadding(
                 dp(18),
@@ -1416,17 +1386,16 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(25)
         );
 
-
-        root.setBackgroundColor(BG);
-
+        root.setBackgroundColor(
+                BG
+        );
 
         return root;
     }
 
-
-    // =========================================================
+    // =========================
     // TEXT
-    // =========================================================
+    // =========================
 
     private TextView createText(
             String text,
@@ -1437,20 +1406,15 @@ protected void onCreate(Bundle savedInstanceState) {
         TextView view =
                 new TextView(this);
 
-
         view.setText(text);
-
 
         view.setTextSize(size);
 
-
         view.setTextColor(color);
-
 
         view.setGravity(
                 Gravity.CENTER
         );
-
 
         if (bold) {
 
@@ -1460,7 +1424,6 @@ protected void onCreate(Bundle savedInstanceState) {
             );
         }
 
-
         view.setPadding(
                 dp(5),
                 dp(5),
@@ -1468,14 +1431,12 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(5)
         );
 
-
         return view;
     }
 
-
-    // =========================================================
+    // =========================
     // INPUT
-    // =========================================================
+    // =========================
 
     private EditText createInput(
             String hint) {
@@ -1483,9 +1444,7 @@ protected void onCreate(Bundle savedInstanceState) {
         EditText input =
                 new EditText(this);
 
-
         input.setHint(hint);
-
 
         input.setHintTextColor(
                 Color.rgb(
@@ -1495,15 +1454,13 @@ protected void onCreate(Bundle savedInstanceState) {
                 )
         );
 
-
-        input.setTextColor(WHITE);
-
+        input.setTextColor(
+                WHITE
+        );
 
         input.setTextSize(16);
 
-
         input.setSingleLine(true);
-
 
         input.setPadding(
                 dp(15),
@@ -1512,13 +1469,11 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(5)
         );
 
-
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(
                         -1,
                         dp(58)
                 );
-
 
         params.setMargins(
                 0,
@@ -1527,17 +1482,16 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(6)
         );
 
-
-        input.setLayoutParams(params);
-
+        input.setLayoutParams(
+                params
+        );
 
         return input;
     }
 
-
-    // =========================================================
+    // =========================
     // BUTTON
-    // =========================================================
+    // =========================
 
     private Button createButton(
             String text,
@@ -1546,36 +1500,30 @@ protected void onCreate(Bundle savedInstanceState) {
         Button button =
                 new Button(this);
 
-
         button.setText(text);
-
 
         button.setTextSize(15);
 
-
-        button.setTextColor(WHITE);
-
+        button.setTextColor(
+                WHITE
+        );
 
         button.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
 
-
         button.setAllCaps(false);
-
 
         button.setBackgroundColor(
                 background
         );
-
 
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(
                         -1,
                         dp(55)
                 );
-
 
         params.setMargins(
                 0,
@@ -1584,17 +1532,16 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(6)
         );
 
-
-        button.setLayoutParams(params);
-
+        button.setLayoutParams(
+                params
+        );
 
         return button;
     }
 
-
-    // =========================================================
+    // =========================
     // MARGIN
-    // =========================================================
+    // =========================
 
     private LinearLayout.LayoutParams marginParams(
             int left,
@@ -1608,7 +1555,6 @@ protected void onCreate(Bundle savedInstanceState) {
                         -2
                 );
 
-
         params.setMargins(
                 dp(left),
                 dp(top),
@@ -1616,14 +1562,12 @@ protected void onCreate(Bundle savedInstanceState) {
                 dp(bottom)
         );
 
-
         return params;
     }
 
-
-    // =========================================================
+    // =========================
     // SCROLL
-    // =========================================================
+    // =========================
 
     private ScrollView wrapScroll(
             LinearLayout root) {
@@ -1631,23 +1575,22 @@ protected void onCreate(Bundle savedInstanceState) {
         ScrollView scroll =
                 new ScrollView(this);
 
+        scroll.setFillViewport(
+                true
+        );
 
-        scroll.setFillViewport(true);
-
-
-        scroll.setBackgroundColor(BG);
-
+        scroll.setBackgroundColor(
+                BG
+        );
 
         scroll.addView(root);
-
 
         return scroll;
     }
 
-
-    // =========================================================
+    // =========================
     // DP
-    // =========================================================
+    // =========================
 
     private int dp(int value) {
 
@@ -1659,10 +1602,9 @@ protected void onCreate(Bundle savedInstanceState) {
         );
     }
 
-
-    // =========================================================
+    // =========================
     // PASSWORD HASH
-    // =========================================================
+    // =========================
 
     private String hashPassword(
             String password) {
@@ -1674,7 +1616,6 @@ protected void onCreate(Bundle savedInstanceState) {
                             "SHA-256"
                     );
 
-
             byte[] hash =
                     digest.digest(
                             password.getBytes(
@@ -1682,10 +1623,8 @@ protected void onCreate(Bundle savedInstanceState) {
                             )
                     );
 
-
             StringBuilder hex =
                     new StringBuilder();
-
 
             for (byte b : hash) {
 
@@ -1694,16 +1633,12 @@ protected void onCreate(Bundle savedInstanceState) {
                                 0xff & b
                         );
 
-
                 if (h.length() == 1) {
-
                     hex.append('0');
                 }
 
-
                 hex.append(h);
             }
-
 
             return hex.toString();
 
@@ -1713,10 +1648,9 @@ protected void onCreate(Bundle savedInstanceState) {
         }
     }
 
-
-    // =========================================================
+    // =========================
     // STOP TIMER
-    // =========================================================
+    // =========================
 
     private void stopTimer() {
 
@@ -1726,12 +1660,13 @@ protected void onCreate(Bundle savedInstanceState) {
 
             timer = null;
         }
+
+        gameRunning = false;
     }
 
-
-    // =========================================================
+    // =========================
     // DESTROY
-    // =========================================================
+    // =========================
 
     @Override
     protected void onDestroy() {
