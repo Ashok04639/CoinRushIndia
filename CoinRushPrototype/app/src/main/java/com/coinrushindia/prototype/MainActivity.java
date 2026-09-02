@@ -8,12 +8,14 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
 import android.view.animation.ScaleAnimation;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.res.ColorStateList;
 
 import androidx.annotation.NonNull;
 
@@ -37,13 +39,12 @@ public class MainActivity extends Activity {
     private Button restartButton;
 
     private int score = 0;
-
     private CountDownTimer countDownTimer;
 
     private InterstitialAd interstitialAd;
     private RewardedAd rewardedAd;
 
-    // Google test ad IDs
+    // Google TEST Ad IDs
     private static final String INTERSTITIAL_AD_ID =
             "ca-app-pub-3940256099942544/1033173712";
 
@@ -65,117 +66,93 @@ public class MainActivity extends Activity {
     }
 
     private int dp(int value) {
-        return (int) (
-                value * getResources()
-                        .getDisplayMetrics().density + 0.5f
-        );
+        return (int) (value * getResources()
+                .getDisplayMetrics().density + 0.5f);
     }
 
     private GradientDrawable roundedBackground(
             int color,
-            int radius
-    ) {
-        GradientDrawable drawable =
-                new GradientDrawable();
+            int radius) {
 
+        GradientDrawable drawable = new GradientDrawable();
         drawable.setColor(color);
         drawable.setCornerRadius(dp(radius));
 
         return drawable;
     }
 
-    private TextView makeText(
-            String text,
-            float size,
-            int color
-    ) {
-        TextView view = new TextView(this);
-
-        view.setText(text);
-        view.setTextSize(size);
-        view.setTextColor(color);
-        view.setGravity(Gravity.CENTER);
-
-        return view;
-    }
-
     private void createGameScreen() {
 
-        ScrollView scrollView =
-                new ScrollView(this);
+        LinearLayout mainLayout = new LinearLayout(this);
 
-        scrollView.setFillViewport(true);
-
-        scrollView.setBackgroundColor(
-                Color.rgb(12, 15, 25)
-        );
-
-        LinearLayout mainLayout =
-                new LinearLayout(this);
-
-        mainLayout.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        mainLayout.setGravity(
-                Gravity.CENTER_HORIZONTAL
-        );
-
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setGravity(Gravity.CENTER_HORIZONTAL);
         mainLayout.setPadding(
                 dp(18),
                 dp(20),
                 dp(18),
-                dp(25)
+                dp(20)
         );
 
-        scrollView.addView(mainLayout);
-
-        // --------------------------------
-        // HEADER
-        // --------------------------------
-
-        TextView title = makeText(
-                "🇮🇳 Coin Rush India",
-                30,
-                Color.WHITE
+        mainLayout.setBackgroundColor(
+                Color.rgb(10, 12, 25)
         );
 
+        // =========================
+        // TITLE
+        // =========================
+
+        TextView title = new TextView(this);
+
+        title.setText("🇮🇳 Coin Rush India");
+        title.setTextSize(32);
+        title.setTextColor(Color.WHITE);
         title.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
-
-        LinearLayout.LayoutParams titleParams =
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(65)
-                );
+        title.setGravity(Gravity.CENTER);
 
         mainLayout.addView(
                 title,
-                titleParams
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(70)
+                )
         );
 
-        TextView subtitle = makeText(
-                "TAP • COLLECT • RUSH!",
-                14,
-                Color.LTGRAY
+        // SUBTITLE
+
+        TextView subtitle = new TextView(this);
+
+        subtitle.setText("TAP • COLLECT • RUSH!");
+        subtitle.setTextSize(17);
+        subtitle.setTextColor(
+                Color.rgb(210, 210, 220)
         );
+        subtitle.setGravity(Gravity.CENTER);
 
         LinearLayout.LayoutParams subtitleParams =
                 new LinearLayout.LayoutParams(
                         -1,
-                        dp(35)
+                        dp(45)
                 );
+
+        subtitleParams.setMargins(
+                0,
+                dp(5),
+                0,
+                dp(12)
+        );
 
         mainLayout.addView(
                 subtitle,
                 subtitleParams
         );
 
-        // --------------------------------
+        // =========================
         // SCORE CARD
-        // --------------------------------
+        // =========================
 
         LinearLayout scoreCard =
                 new LinearLayout(this);
@@ -184,112 +161,102 @@ public class MainActivity extends Activity {
                 LinearLayout.VERTICAL
         );
 
-        scoreCard.setGravity(
-                Gravity.CENTER
-        );
-
-        scoreCard.setPadding(
-                dp(10),
-                dp(8),
-                dp(10),
-                dp(8)
-        );
+        scoreCard.setGravity(Gravity.CENTER);
 
         scoreCard.setBackground(
                 roundedBackground(
-                        Color.rgb(28, 32, 48),
-                        18
+                        Color.rgb(30, 33, 52),
+                        28
                 )
         );
 
-        scoreText = makeText(
-                "0",
-                38,
-                Color.YELLOW
-        );
+        scoreText = new TextView(this);
 
+        scoreText.setText("0");
+        scoreText.setTextSize(50);
+        scoreText.setTextColor(Color.YELLOW);
         scoreText.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
+        scoreText.setGravity(Gravity.CENTER);
 
         scoreCard.addView(
                 scoreText,
                 new LinearLayout.LayoutParams(
                         -1,
-                        dp(55)
+                        dp(75)
                 )
         );
 
-        TextView scoreLabel = makeText(
-                "COINS",
-                13,
-                Color.LTGRAY
+        TextView coinsLabel = new TextView(this);
+
+        coinsLabel.setText("COINS");
+        coinsLabel.setTextSize(16);
+        coinsLabel.setTextColor(
+                Color.rgb(220, 220, 225)
         );
+        coinsLabel.setGravity(Gravity.CENTER);
 
         scoreCard.addView(
-                scoreLabel,
+                coinsLabel,
                 new LinearLayout.LayoutParams(
                         -1,
-                        dp(25)
+                        dp(40)
                 )
         );
 
-        LinearLayout.LayoutParams scoreCardParams =
+        LinearLayout.LayoutParams scoreParams =
                 new LinearLayout.LayoutParams(
-                        dp(220),
-                        dp(100)
+                        -1,
+                        dp(145)
                 );
 
-        scoreCardParams.gravity = Gravity.CENTER;
-
-        scoreCardParams.setMargins(
+        scoreParams.setMargins(
+                dp(25),
                 0,
-                dp(10),
-                0,
-                dp(10)
+                dp(25),
+                dp(18)
         );
 
         mainLayout.addView(
                 scoreCard,
-                scoreCardParams
+                scoreParams
         );
 
-        // --------------------------------
+        // =========================
         // TIMER
-        // --------------------------------
+        // =========================
 
-        timerText = makeText(
-                "⏱️ 30",
-                21,
-                Color.WHITE
-        );
+        timerText = new TextView(this);
 
+        timerText.setText("⏱️ 30");
+        timerText.setTextSize(25);
+        timerText.setTextColor(Color.WHITE);
         timerText.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
+        timerText.setGravity(Gravity.CENTER);
 
         timerText.setBackground(
                 roundedBackground(
-                        Color.rgb(40, 44, 62),
-                        30
+                        Color.rgb(42, 45, 70),
+                        50
                 )
         );
 
         LinearLayout.LayoutParams timerParams =
                 new LinearLayout.LayoutParams(
-                        dp(130),
-                        dp(45)
+                        dp(250),
+                        dp(65)
                 );
-
-        timerParams.gravity = Gravity.CENTER;
 
         timerParams.setMargins(
                 0,
-                dp(5),
                 0,
-                dp(12)
+                0,
+                dp(18)
         );
 
         mainLayout.addView(
@@ -297,74 +264,65 @@ public class MainActivity extends Activity {
                 timerParams
         );
 
-        // --------------------------------
+        // =========================
         // MESSAGE
-        // --------------------------------
+        // =========================
 
-        messageText = makeText(
-                "Tap the coin as fast as you can!",
-                16,
-                Color.LTGRAY
+        messageText = new TextView(this);
+
+        messageText.setText(
+                "Tap the coin as fast as you can!"
         );
 
-        LinearLayout.LayoutParams messageParams =
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(55)
-                );
+        messageText.setTextSize(18);
+        messageText.setTextColor(
+                Color.rgb(220, 220, 225)
+        );
+        messageText.setGravity(Gravity.CENTER);
 
         mainLayout.addView(
                 messageText,
-                messageParams
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(60)
+                )
         );
 
-        // --------------------------------
+        // =========================
         // COIN BUTTON
-        // --------------------------------
+        // =========================
 
         coinButton = new Button(this);
 
-        coinButton.setText(
-                "🪙\nTAP!"
+        coinButton.setText("🪙\nTAP!");
+        coinButton.setTextSize(27);
+        coinButton.setTextColor(Color.WHITE);
+        coinButton.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
         );
 
-        coinButton.setTextSize(25);
-        coinButton.setTextColor(Color.WHITE);
         coinButton.setGravity(Gravity.CENTER);
+
         coinButton.setAllCaps(false);
 
-        GradientDrawable coinBackground =
-                new GradientDrawable();
-
-        coinBackground.setShape(
-                GradientDrawable.OVAL
-        );
-
-        coinBackground.setColor(
-                Color.rgb(255, 152, 0)
-        );
-
         coinButton.setBackground(
-                coinBackground
+                createCoinBackground()
         );
 
-        coinButton.setElevation(
-                dp(10)
-        );
+        coinButton.setElevation(dp(10));
 
         LinearLayout.LayoutParams coinParams =
                 new LinearLayout.LayoutParams(
-                        dp(190),
-                        dp(190)
+                        dp(300),
+                        dp(300)
                 );
-
-        coinParams.gravity = Gravity.CENTER;
 
         coinParams.setMargins(
                 0,
-                dp(8),
+                dp(5),
                 0,
-                dp(18)
+                dp(25)
         );
 
         mainLayout.addView(
@@ -380,29 +338,13 @@ public class MainActivity extends Activity {
                     String.valueOf(score)
             );
 
-            // TAP animation
-            ScaleAnimation animation =
-                    new ScaleAnimation(
-                            0.90f,
-                            1.0f,
-                            0.90f,
-                            1.0f,
-                            ScaleAnimation.RELATIVE_TO_SELF,
-                            0.5f,
-                            ScaleAnimation.RELATIVE_TO_SELF,
-                            0.5f
-                    );
+            playTapAnimation();
 
-            animation.setDuration(100);
-
-            coinButton.startAnimation(
-                    animation
-            );
         });
 
-        // --------------------------------
+        // =========================
         // REWARD BUTTON
-        // --------------------------------
+        // =========================
 
         rewardButton = new Button(this);
 
@@ -410,34 +352,35 @@ public class MainActivity extends Activity {
                 "🎁  WATCH AD  •  2X COINS"
         );
 
-        rewardButton.setTextSize(15);
+        rewardButton.setTextSize(18);
         rewardButton.setTextColor(Color.WHITE);
+        rewardButton.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
         rewardButton.setAllCaps(false);
 
         rewardButton.setBackground(
                 roundedBackground(
-                        Color.rgb(46, 125, 50),
-                        18
+                        Color.rgb(45, 150, 55),
+                        30
                 )
         );
 
-        rewardButton.setVisibility(
-                View.GONE
-        );
+        rewardButton.setVisibility(View.GONE);
 
         LinearLayout.LayoutParams rewardParams =
                 new LinearLayout.LayoutParams(
-                        dp(290),
-                        dp(58)
+                        -1,
+                        dp(70)
                 );
-
-        rewardParams.gravity = Gravity.CENTER;
 
         rewardParams.setMargins(
                 0,
-                dp(5),
                 0,
-                dp(10)
+                0,
+                dp(15)
         );
 
         mainLayout.addView(
@@ -449,9 +392,9 @@ public class MainActivity extends Activity {
                 v -> showRewardedAd()
         );
 
-        // --------------------------------
+        // =========================
         // RESTART BUTTON
-        // --------------------------------
+        // =========================
 
         restartButton = new Button(this);
 
@@ -459,72 +402,84 @@ public class MainActivity extends Activity {
                 "🔄  RESTART GAME"
         );
 
-        restartButton.setTextSize(15);
+        restartButton.setTextSize(18);
         restartButton.setTextColor(Color.WHITE);
+        restartButton.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
         restartButton.setAllCaps(false);
 
         restartButton.setBackground(
                 roundedBackground(
-                        Color.rgb(55, 65, 85),
-                        18
+                        Color.rgb(55, 65, 90),
+                        30
                 )
         );
 
-        restartButton.setVisibility(
-                View.GONE
-        );
-
-        LinearLayout.LayoutParams restartParams =
-                new LinearLayout.LayoutParams(
-                        dp(250),
-                        dp(55)
-                );
-
-        restartParams.gravity = Gravity.CENTER;
+        restartButton.setVisibility(View.GONE);
 
         mainLayout.addView(
                 restartButton,
-                restartParams
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(70)
+                )
         );
 
         restartButton.setOnClickListener(
                 v -> startGame()
         );
 
-        // --------------------------------
-        // FOOTER
-        // --------------------------------
-
-        TextView footer = makeText(
-                "Coin Rush India • Have Fun!",
-                12,
-                Color.GRAY
-        );
-
-        LinearLayout.LayoutParams footerParams =
-                new LinearLayout.LayoutParams(
-                        -1,
-                        dp(35)
-                );
-
-        footerParams.setMargins(
-                0,
-                dp(15),
-                0,
-                0
-        );
-
-        mainLayout.addView(
-                footer,
-                footerParams
-        );
-
-        setContentView(scrollView);
+        setContentView(mainLayout);
     }
 
-    // --------------------------------
-    // START GAME
-    // --------------------------------
+    private GradientDrawable createCoinBackground() {
+
+        GradientDrawable coin =
+                new GradientDrawable();
+
+        coin.setShape(
+                GradientDrawable.OVAL
+        );
+
+        coin.setColor(
+                Color.rgb(255, 152, 0)
+        );
+
+        coin.setStroke(
+                dp(5),
+                Color.rgb(255, 190, 40)
+        );
+
+        return coin;
+    }
+
+    private void playTapAnimation() {
+
+        ScaleAnimation animation =
+                new ScaleAnimation(
+                        1.0f,
+                        0.92f,
+                        1.0f,
+                        0.92f,
+                        Animation.RELATIVE_TO_SELF,
+                        0.5f,
+                        Animation.RELATIVE_TO_SELF,
+                        0.5f
+                );
+
+        animation.setDuration(80);
+
+        animation.setRepeatCount(1);
+
+        animation.setRepeatMode(
+                Animation.REVERSE
+        );
+
+        coinButton.startAnimation(animation);
+    }
 
     private void startGame() {
 
@@ -532,26 +487,18 @@ public class MainActivity extends Activity {
 
         scoreText.setText("0");
 
-        timerText.setText(
-                "⏱️ 30"
-        );
+        timerText.setText("⏱️ 30");
 
         messageText.setText(
                 "Tap the coin as fast as you can!"
         );
 
         coinButton.setEnabled(true);
-        coinButton.setVisibility(
-                View.VISIBLE
-        );
+        coinButton.setVisibility(View.VISIBLE);
 
-        rewardButton.setVisibility(
-                View.GONE
-        );
+        rewardButton.setVisibility(View.GONE);
 
-        restartButton.setVisibility(
-                View.GONE
-        );
+        restartButton.setVisibility(View.GONE);
 
         if (countDownTimer != null) {
             countDownTimer.cancel();
@@ -565,8 +512,7 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onTick(
-                            long millisUntilFinished
-                    ) {
+                            long millisUntilFinished) {
 
                         long seconds =
                                 (millisUntilFinished + 999)
@@ -584,9 +530,7 @@ public class MainActivity extends Activity {
                                 "⏱️ 0"
                         );
 
-                        coinButton.setEnabled(
-                                false
-                        );
+                        coinButton.setEnabled(false);
 
                         messageText.setText(
                                 "🎉 GAME OVER!\n"
@@ -610,9 +554,9 @@ public class MainActivity extends Activity {
         countDownTimer.start();
     }
 
-    // --------------------------------
+    // =========================
     // INTERSTITIAL AD
-    // --------------------------------
+    // =========================
 
     private void loadInterstitialAd() {
 
@@ -627,8 +571,7 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onAdLoaded(
-                            @NonNull InterstitialAd ad
-                    ) {
+                            @NonNull InterstitialAd ad) {
 
                         interstitialAd = ad;
 
@@ -637,9 +580,11 @@ public class MainActivity extends Activity {
                                         new FullScreenContentCallback() {
 
                                             @Override
-                                            public void onAdDismissedFullScreenContent() {
+                                            public void
+                                            onAdDismissedFullScreenContent() {
 
-                                                interstitialAd = null;
+                                                interstitialAd =
+                                                        null;
 
                                                 loadInterstitialAd();
                                             }
@@ -649,8 +594,7 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onAdFailedToLoad(
-                            @NonNull LoadAdError adError
-                    ) {
+                            @NonNull LoadAdError error) {
 
                         interstitialAd = null;
                     }
@@ -670,9 +614,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    // --------------------------------
+    // =========================
     // REWARDED AD
-    // --------------------------------
+    // =========================
 
     private void loadRewardedAd() {
 
@@ -687,8 +631,7 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onAdLoaded(
-                            @NonNull RewardedAd ad
-                    ) {
+                            @NonNull RewardedAd ad) {
 
                         rewardedAd = ad;
 
@@ -697,9 +640,11 @@ public class MainActivity extends Activity {
                                         new FullScreenContentCallback() {
 
                                             @Override
-                                            public void onAdDismissedFullScreenContent() {
+                                            public void
+                                            onAdDismissedFullScreenContent() {
 
-                                                rewardedAd = null;
+                                                rewardedAd =
+                                                        null;
 
                                                 loadRewardedAd();
                                             }
@@ -709,8 +654,7 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onAdFailedToLoad(
-                            @NonNull LoadAdError adError
-                    ) {
+                            @NonNull LoadAdError error) {
 
                         rewardedAd = null;
                     }
