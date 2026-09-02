@@ -13,8 +13,8 @@
 
         <!-- LIVE ADMOB APP ID -->
         <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-459015901387755~6817704062" />
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-4590159013838755~2219878303" />
 
         <activity
             android:name=".MainActivity"
