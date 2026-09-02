@@ -9,6 +9,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,7 +21,6 @@ import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
-import com.google.android.gms.ads.rewarded.RewardItem;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 
@@ -31,8 +31,8 @@ public class MainActivity extends Activity {
     private TextView messageText;
 
     private Button coinButton;
-    private Button restartButton;
     private Button rewardButton;
+    private Button restartButton;
 
     private int score = 0;
 
@@ -62,75 +62,148 @@ public class MainActivity extends Activity {
         startGame();
     }
 
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private TextView makeText(String text, float size, int color) {
+
+        TextView view = new TextView(this);
+
+        view.setText(text);
+        view.setTextSize(size);
+        view.setTextColor(color);
+        view.setGravity(Gravity.CENTER);
+        view.setTypeface(Typeface.DEFAULT);
+
+        return view;
+    }
+
     private void createGameScreen() {
+
+        ScrollView scrollView = new ScrollView(this);
+
+        scrollView.setFillViewport(true);
+        scrollView.setBackgroundColor(Color.rgb(20, 20, 30));
 
         LinearLayout mainLayout = new LinearLayout(this);
 
         mainLayout.setOrientation(LinearLayout.VERTICAL);
-        mainLayout.setGravity(Gravity.CENTER);
-        mainLayout.setPadding(25, 25, 25, 25);
-        mainLayout.setBackgroundColor(Color.rgb(20, 20, 30));
-
-        TextView title = new TextView(this);
-        title.setText("🇮🇳 Coin Rush India");
-        title.setTextSize(30);
-        title.setTextColor(Color.WHITE);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
-
-        mainLayout.addView(
-                title,
-                new LinearLayout.LayoutParams(-1, 100)
+        mainLayout.setGravity(Gravity.CENTER_HORIZONTAL);
+        mainLayout.setPadding(
+                dp(16),
+                dp(20),
+                dp(16),
+                dp(20)
         );
 
-        scoreText = new TextView(this);
-        scoreText.setText("Coins: 0");
-        scoreText.setTextSize(28);
-        scoreText.setTextColor(Color.YELLOW);
-        scoreText.setGravity(Gravity.CENTER);
+        scrollView.addView(mainLayout);
 
-        mainLayout.addView(
-                scoreText,
-                new LinearLayout.LayoutParams(-1, 80)
+        // TITLE
+        TextView title = makeText(
+                "🇮🇳 Coin Rush India",
+                30,
+                Color.WHITE
         );
 
-        timerText = new TextView(this);
-        timerText.setText("Time: 30");
-        timerText.setTextSize(24);
-        timerText.setTextColor(Color.WHITE);
-        timerText.setGravity(Gravity.CENTER);
-
-        mainLayout.addView(
-                timerText,
-                new LinearLayout.LayoutParams(-1, 70)
+        title.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
         );
 
-        messageText = new TextView(this);
-        messageText.setText(
-                "Tap the coin as fast as you can!"
+        LinearLayout.LayoutParams titleParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(70)
+                );
+
+        mainLayout.addView(title, titleParams);
+
+        // COINS
+        scoreText = makeText(
+                "Coins: 0",
+                28,
+                Color.YELLOW
         );
-        messageText.setTextSize(18);
-        messageText.setTextColor(Color.LTGRAY);
-        messageText.setGravity(Gravity.CENTER);
+
+        scoreText.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        LinearLayout.LayoutParams scoreParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(60)
+                );
+
+        mainLayout.addView(scoreText, scoreParams);
+
+        // TIMER
+        timerText = makeText(
+                "Time: 30",
+                24,
+                Color.WHITE
+        );
+
+        LinearLayout.LayoutParams timerParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(50)
+                );
+
+        mainLayout.addView(timerText, timerParams);
+
+        // MESSAGE
+        messageText = makeText(
+                "Tap the coin as fast as you can!",
+                17,
+                Color.LTGRAY
+        );
+
+        LinearLayout.LayoutParams messageParams =
+                new LinearLayout.LayoutParams(
+                        -1,
+                        dp(60)
+                );
+
+        messageParams.setMargins(
+                0,
+                dp(5),
+                0,
+                dp(10)
+        );
 
         mainLayout.addView(
                 messageText,
-                new LinearLayout.LayoutParams(-1, 80)
+                messageParams
         );
 
+        // COIN BUTTON
         coinButton = new Button(this);
+
         coinButton.setText("🪙\nTAP!");
-        coinButton.setTextSize(28);
+        coinButton.setTextSize(26);
         coinButton.setTextColor(Color.WHITE);
+        coinButton.setGravity(Gravity.CENTER);
+        coinButton.setAllCaps(false);
         coinButton.setBackgroundColor(
                 Color.rgb(255, 152, 0)
         );
 
         LinearLayout.LayoutParams coinParams =
-                new LinearLayout.LayoutParams(300, 220);
+                new LinearLayout.LayoutParams(
+                        dp(240),
+                        dp(150)
+                );
 
         coinParams.gravity = Gravity.CENTER;
-        coinParams.setMargins(0, 20, 0, 20);
+        coinParams.setMargins(
+                0,
+                dp(5),
+                0,
+                dp(15)
+        );
 
         mainLayout.addView(
                 coinButton,
@@ -146,35 +219,70 @@ public class MainActivity extends Activity {
             );
         });
 
+        // REWARD BUTTON
         rewardButton = new Button(this);
-        rewardButton.setText("🎁 WATCH AD → 2X COINS");
-        rewardButton.setTextSize(16);
+
+        rewardButton.setText(
+                "🎁  WATCH AD  •  2X COINS"
+        );
+
+        rewardButton.setTextSize(15);
+        rewardButton.setTextColor(Color.WHITE);
+        rewardButton.setAllCaps(false);
         rewardButton.setVisibility(View.GONE);
+
+        LinearLayout.LayoutParams rewardParams =
+                new LinearLayout.LayoutParams(
+                        dp(280),
+                        dp(55)
+                );
+
+        rewardParams.gravity = Gravity.CENTER;
+        rewardParams.setMargins(
+                0,
+                dp(5),
+                0,
+                dp(10)
+        );
 
         mainLayout.addView(
                 rewardButton,
-                new LinearLayout.LayoutParams(350, 80)
+                rewardParams
         );
 
         rewardButton.setOnClickListener(v ->
                 showRewardedAd()
         );
 
+        // RESTART BUTTON
         restartButton = new Button(this);
-        restartButton.setText("RESTART GAME");
-        restartButton.setTextSize(18);
+
+        restartButton.setText(
+                "🔄  RESTART GAME"
+        );
+
+        restartButton.setTextSize(16);
+        restartButton.setAllCaps(false);
         restartButton.setVisibility(View.GONE);
+
+        LinearLayout.LayoutParams restartParams =
+                new LinearLayout.LayoutParams(
+                        dp(240),
+                        dp(55)
+                );
+
+        restartParams.gravity = Gravity.CENTER;
 
         mainLayout.addView(
                 restartButton,
-                new LinearLayout.LayoutParams(300, 80)
+                restartParams
         );
 
         restartButton.setOnClickListener(v ->
                 startGame()
         );
 
-        setContentView(mainLayout);
+        setContentView(scrollView);
     }
 
     private void startGame() {
@@ -204,7 +312,8 @@ public class MainActivity extends Activity {
         ) {
 
             @Override
-            public void onTick(long millisUntilFinished) {
+            public void onTick(
+                    long millisUntilFinished) {
 
                 long seconds =
                         (millisUntilFinished + 999) / 1000;
@@ -227,11 +336,14 @@ public class MainActivity extends Activity {
                                 + " coins!"
                 );
 
-                rewardButton.setVisibility(View.VISIBLE);
+                rewardButton.setVisibility(
+                        View.VISIBLE
+                );
 
-                restartButton.setVisibility(View.VISIBLE);
+                restartButton.setVisibility(
+                        View.VISIBLE
+                );
 
-                // Show interstitial after game finishes
                 showInterstitialAd();
             }
         };
@@ -256,18 +368,19 @@ public class MainActivity extends Activity {
 
                         interstitialAd = ad;
 
-                        interstitialAd.setFullScreenContentCallback(
-                                new FullScreenContentCallback() {
+                        interstitialAd
+                                .setFullScreenContentCallback(
+                                        new FullScreenContentCallback() {
 
-                                    @Override
-                                    public void onAdDismissedFullScreenContent() {
+                                            @Override
+                                            public void onAdDismissedFullScreenContent() {
 
-                                        interstitialAd = null;
+                                                interstitialAd = null;
 
-                                        loadInterstitialAd();
-                                    }
-                                }
-                        );
+                                                loadInterstitialAd();
+                                            }
+                                        }
+                                );
                     }
 
                     @Override
@@ -309,18 +422,19 @@ public class MainActivity extends Activity {
 
                         rewardedAd = ad;
 
-                        rewardedAd.setFullScreenContentCallback(
-                                new FullScreenContentCallback() {
+                        rewardedAd
+                                .setFullScreenContentCallback(
+                                        new FullScreenContentCallback() {
 
-                                    @Override
-                                    public void onAdDismissedFullScreenContent() {
+                                            @Override
+                                            public void onAdDismissedFullScreenContent() {
 
-                                        rewardedAd = null;
+                                                rewardedAd = null;
 
-                                        loadRewardedAd();
-                                    }
-                                }
-                        );
+                                                loadRewardedAd();
+                                            }
+                                        }
+                                );
                     }
 
                     @Override
@@ -341,7 +455,6 @@ public class MainActivity extends Activity {
                     this,
                     rewardItem -> {
 
-                        // Double the player's coins
                         score = score * 2;
 
                         scoreText.setText(
