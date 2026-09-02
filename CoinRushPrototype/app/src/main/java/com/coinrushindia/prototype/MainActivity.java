@@ -95,6 +95,7 @@ protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
     TextView test = new TextView(this);
+
     test.setText("🇮🇳 Coin Rush India\n\nAPP START TEST OK");
     test.setTextSize(28);
     test.setTextColor(Color.WHITE);
@@ -102,9 +103,8 @@ protected void onCreate(Bundle savedInstanceState) {
     test.setBackgroundColor(BG);
 
     setContentView(test);
-
-    // initializeAds();
 }
+
 
 
 
