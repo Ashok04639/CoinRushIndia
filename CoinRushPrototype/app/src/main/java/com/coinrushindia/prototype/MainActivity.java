@@ -93,49 +93,97 @@ protected void onCreate(Bundle savedInstanceState) {
     }
 
     private void loadInterstitialAd() {
-        AdRequest request =
-                new AdRequest.Builder().build();
+    AdRequest request = new AdRequest.Builder().build();
 
-        InterstitialAd.load(
-                this,
-                INTERSTITIAL_AD_ID,
-                request,
-                new InterstitialAdLoadCallback() {
+    InterstitialAd.load(
+            this,
+            INTERSTITIAL_AD_ID,
+            request,
+            new InterstitialAdLoadCallback() {
 
-                    @Override
-                    public void onAdLoaded(
-                            InterstitialAd ad) {
+                @Override
+                public void onAdLoaded(InterstitialAd ad) {
+                    interstitialAd = ad;
 
-                        interstitialAd = ad;
+                    interstitialAd.setFullScreenContentCallback(
+                            new FullScreenContentCallback() {
 
-                        interstitialAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
+                                @Override
+                                public void onAdDismissedFullScreenContent() {
+                                    interstitialAd = null;
+                                    loadInterstitialAd();
+                                }
 
-                                            @Override
-                                            public void
-                                            onAdDismissedFullScreenContent() {
-                                                interstitialAd = null;
-                                            }
-
-                                            @Override
-                                            public void
-                                            onAdFailedToShowFullScreenContent(
-                                                    AdError error) {
-                                                interstitialAd = null;
-                                            }
-                                        }
-                                );
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(
-                            LoadAdError error) {
-                        interstitialAd = null;
-                    }
+                                @Override
+                                public void onAdFailedToShowFullScreenContent(
+                                        AdError error) {
+                                    interstitialAd = null;
+                                    loadInterstitialAd();
+                                }
+                            }
+                    );
                 }
-        );
-    }
+
+                @Override
+                public void onAdFailedToLoad(LoadAdError error) {
+                    interstitialAd = null;
+
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Interstitial failed: " + error.getMessage(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+            }
+    );
+}
+
+
+private void loadRewardedAd() {
+    AdRequest request = new AdRequest.Builder().build();
+
+    RewardedAd.load(
+            this,
+            REWARDED_AD_ID,
+            request,
+            new RewardedAdLoadCallback() {
+
+                @Override
+                public void onAdLoaded(RewardedAd ad) {
+                    rewardedAd = ad;
+
+                    rewardedAd.setFullScreenContentCallback(
+                            new FullScreenContentCallback() {
+
+                                @Override
+                                public void onAdDismissedFullScreenContent() {
+                                    rewardedAd = null;
+                                    loadRewardedAd();
+                                }
+
+                                @Override
+                                public void onAdFailedToShowFullScreenContent(
+                                        AdError error) {
+                                    rewardedAd = null;
+                                    loadRewardedAd();
+                                }
+                            }
+                    );
+                }
+
+                @Override
+                public void onAdFailedToLoad(LoadAdError error) {
+                    rewardedAd = null;
+
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Rewarded failed: " + error.getMessage(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+            }
+    );
+}
 
     private void showInterstitialAd() {
         if (interstitialAd != null) {
