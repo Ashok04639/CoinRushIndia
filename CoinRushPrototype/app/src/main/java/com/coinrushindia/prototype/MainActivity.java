@@ -192,50 +192,6 @@ private void loadRewardedAd() {
         }
     }
 
-    private void loadRewardedAd() {
-        AdRequest request =
-                new AdRequest.Builder().build();
-
-        RewardedAd.load(
-                this,
-                REWARDED_AD_ID,
-                request,
-                new RewardedAdLoadCallback() {
-
-                    @Override
-                    public void onAdLoaded(
-                            RewardedAd ad) {
-
-                        rewardedAd = ad;
-
-                        rewardedAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
-
-                                            @Override
-                                            public void
-                                            onAdDismissedFullScreenContent() {
-                                                rewardedAd = null;
-                                            }
-
-                                            @Override
-                                            public void
-                                            onAdFailedToShowFullScreenContent(
-                                                    AdError error) {
-                                                rewardedAd = null;
-                                            }
-                                        }
-                                );
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(
-                            LoadAdError error) {
-                        rewardedAd = null;
-                    }
-                }
-        );
-    }
 
     private void showRewardedAd() {
 
