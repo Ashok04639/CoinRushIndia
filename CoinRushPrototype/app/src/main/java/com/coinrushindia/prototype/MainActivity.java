@@ -50,6 +50,7 @@ public class MainActivity extends Activity {
     private Button rewardButton;
     private Button restartButton;
     private Button logoutButton;
+    private Button balanceButton;
 
     private InterstitialAd interstitialAd;
     private RewardedAd rewardedAd;
@@ -585,7 +586,7 @@ private void loadRewardedAd() {
         );
 
         root.addView(playerText);
-        Button balanceButton = createButton(
+        BalanceButton = createButton(
         "💰 BALANCE: " + totalCoins + " COINS",
         GREEN
 );
@@ -654,6 +655,11 @@ dailyBonusButton.setOnClickListener(v -> {
             .putInt("totalCoins", totalCoins)
             .putString("lastDailyBonus", currentDate)
             .apply();
+    if (balanceButton != null) {
+    balanceButton.setText(
+            "💰 BALANCE: " + totalCoins + " COINS"
+    );
+}
 
     balanceButton.setText(
             "💰 BALANCE: " + totalCoins + " COINS"
