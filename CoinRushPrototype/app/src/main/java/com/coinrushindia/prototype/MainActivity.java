@@ -693,7 +693,7 @@ root.addView(historyButton);
 historyButton.setOnClickListener(
         v -> showCoinHistory()
 );
-    }
+}
         private void showCoinHistory() {
     String history = prefs.getString(
             "coinHistory",
