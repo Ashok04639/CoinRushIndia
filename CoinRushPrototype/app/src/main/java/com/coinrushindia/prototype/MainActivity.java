@@ -690,7 +690,9 @@ dailyBonusButton.setOnClickListener(v -> {
 
 root.addView(historyButton);
 
-historyButton.setOnClickListener(v -> showCoinHistory());
+historyButton.setOnClickListener(
+        v -> showCoinHistory()
+);
     }
         private void showCoinHistory() {
     String history = prefs.getString(
@@ -747,7 +749,7 @@ historyButton.setOnClickListener(v -> showCoinHistory());
     );
 
     setContentView(wrapScroll(root));
-}());
+}
         LinearLayout scoreCard =
                 new LinearLayout(this);
 
