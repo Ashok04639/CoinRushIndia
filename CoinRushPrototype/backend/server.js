@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const pool = require("./db");
 require("dotenv").config();
 
 const app = express();
@@ -32,9 +33,23 @@ app.get("/api/v1/health", (req, res) => {
     status: "OK"
   });
 });
-
+app.get("/api/v1/db-health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({
+      success: true,
+      database: "connected"
+    });
+  } catch (error) {
+    console.error("Database health check failed:", error.message);
+    res.status(500).json({
+      success: false,
+      database: "disconnected"
+    });
+  }
+});
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+ app.listen(PORT, "0.0.0.0", () => {
   console.log(`CoinRushIndia API running on port ${PORT}`);
 });
