@@ -605,7 +605,78 @@ balanceButton.setOnClickListener(v -> {
             "💰 BALANCE: " + totalCoins + " COINS"
     );
 });
+Button dailyBonusButton = createButton(
+        "🎁 DAILY BONUS +100 COINS",
+        ORANGE
+);
 
+root.addView(dailyBonusButton);
+
+String today = new java.text.SimpleDateFormat(
+        "yyyyMMdd",
+        java.util.Locale.getDefault()
+).format(new java.util.Date());
+
+String lastBonusDate = prefs.getString(
+        "lastDailyBonus",
+        ""
+);
+
+if (today.equals(lastBonusDate)) {
+    dailyBonusButton.setText("✅ DAILY BONUS CLAIMED");
+    dailyBonusButton.setEnabled(false);
+}
+
+dailyBonusButton.setOnClickListener(v -> {
+
+    String currentDate = new java.text.SimpleDateFormat(
+            "yyyyMMdd",
+            java.util.Locale.getDefault()
+    ).format(new java.util.Date());
+
+    String savedDate = prefs.getString(
+            "lastDailyBonus",
+            ""
+    );
+
+    if (currentDate.equals(savedDate)) {
+        Toast.makeText(
+                this,
+                "Aaj ka bonus already claim ho chuka hai.",
+                Toast.LENGTH_SHORT
+        ).show();
+        return;
+    }
+
+    totalCoins += 100;
+
+    prefs.edit()
+            .putInt("totalCoins", totalCoins)
+            .putString("lastDailyBonus", currentDate)
+            .apply();
+
+    balanceButton.setText(
+            "💰 BALANCE: " + totalCoins + " COINS"
+    );
+
+    if (totalText != null) {
+        totalText.setText(
+                "TOTAL COINS: " + totalCoins
+        );
+    }
+
+    dailyBonusButton.setText(
+            "✅ DAILY BONUS CLAIMED"
+    );
+
+    dailyBonusButton.setEnabled(false);
+
+    Toast.makeText(
+            this,
+            "🎁 +100 coins bonus!",
+            Toast.LENGTH_SHORT
+    ).show();
+});
         LinearLayout scoreCard =
                 new LinearLayout(this);
 
