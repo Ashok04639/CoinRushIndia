@@ -659,11 +659,6 @@ dailyBonusButton.setOnClickListener(v -> {
     balanceButton.setText(
             "💰 BALANCE: " + totalCoins + " COINS"
     );
-}
-
-    balanceButton.setText(
-            "💰 BALANCE: " + totalCoins + " COINS"
-    );
 
     if (totalText != null) {
         totalText.setText(
@@ -691,10 +686,12 @@ dailyBonusButton.setOnClickListener(v -> {
 root.addView(historyButton);
 
 historyButton.setOnClickListener(
-        v -> showCoinHistory()
+    v -> showCoinHistory()
 );
 }
-        private void showCoinHistory() {
+
+private void showCoinHistory() {
+
     String history = prefs.getString(
             "coinHistory",
             ""
