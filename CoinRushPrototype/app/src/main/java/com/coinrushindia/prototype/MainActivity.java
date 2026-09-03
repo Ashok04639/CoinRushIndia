@@ -78,7 +78,7 @@ protected void onCreate(Bundle savedInstanceState) {
     prefs = getSharedPreferences(
         "CoinRushIndia",
         MODE_PRIVATE
-    )
+    );
 
         username = prefs.getString("username", "");
         bestScore = prefs.getInt("bestScore", 0);
