@@ -586,7 +586,7 @@ private void loadRewardedAd() {
         );
 
         root.addView(playerText);
-        BalanceButton = createButton(
+        balanceButton = createButton(
         "💰 BALANCE: " + totalCoins + " COINS",
         GREEN
 );
