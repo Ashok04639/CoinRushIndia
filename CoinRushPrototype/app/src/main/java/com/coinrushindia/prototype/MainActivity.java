@@ -74,6 +74,7 @@ public class MainActivity extends Activity {
     private final int RED = Color.rgb(230, 70, 70);
     private final int GRAY = Color.rgb(150, 160, 175);
     private final int YELLOW = Color.rgb(255, 215, 60);
+    private final int BLUE = Color.rgb(70, 120, 220);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,9 +102,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    // =========================
+    // =========================================================
     // INTERSTITIAL AD
-    // =========================
+    // =========================================================
 
     private void loadInterstitialAd() {
 
@@ -117,31 +118,29 @@ public class MainActivity extends Activity {
                 new InterstitialAdLoadCallback() {
 
                     @Override
-                    public void onAdLoaded(
-                            InterstitialAd ad) {
+                    public void onAdLoaded(InterstitialAd ad) {
 
                         interstitialAd = ad;
 
-                        interstitialAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
+                        interstitialAd.setFullScreenContentCallback(
+                                new FullScreenContentCallback() {
 
-                                            @Override
-                                            public void onAdDismissedFullScreenContent() {
+                                    @Override
+                                    public void onAdDismissedFullScreenContent() {
 
-                                                interstitialAd = null;
-                                                loadInterstitialAd();
-                                            }
+                                        interstitialAd = null;
+                                        loadInterstitialAd();
+                                    }
 
-                                            @Override
-                                            public void onAdFailedToShowFullScreenContent(
-                                                    AdError error) {
+                                    @Override
+                                    public void onAdFailedToShowFullScreenContent(
+                                            AdError error) {
 
-                                                interstitialAd = null;
-                                                loadInterstitialAd();
-                                            }
-                                        }
-                                );
+                                        interstitialAd = null;
+                                        loadInterstitialAd();
+                                    }
+                                }
+                        );
                     }
 
                     @Override
@@ -164,9 +163,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    // =========================
+    // =========================================================
     // REWARDED AD
-    // =========================
+    // =========================================================
 
     private void loadRewardedAd() {
 
@@ -180,31 +179,29 @@ public class MainActivity extends Activity {
                 new RewardedAdLoadCallback() {
 
                     @Override
-                    public void onAdLoaded(
-                            RewardedAd ad) {
+                    public void onAdLoaded(RewardedAd ad) {
 
                         rewardedAd = ad;
 
-                        rewardedAd
-                                .setFullScreenContentCallback(
-                                        new FullScreenContentCallback() {
+                        rewardedAd.setFullScreenContentCallback(
+                                new FullScreenContentCallback() {
 
-                                            @Override
-                                            public void onAdDismissedFullScreenContent() {
+                                    @Override
+                                    public void onAdDismissedFullScreenContent() {
 
-                                                rewardedAd = null;
-                                                loadRewardedAd();
-                                            }
+                                        rewardedAd = null;
+                                        loadRewardedAd();
+                                    }
 
-                                            @Override
-                                            public void onAdFailedToShowFullScreenContent(
-                                                    AdError error) {
+                                    @Override
+                                    public void onAdFailedToShowFullScreenContent(
+                                            AdError error) {
 
-                                                rewardedAd = null;
-                                                loadRewardedAd();
-                                            }
-                                        }
-                                );
+                                        rewardedAd = null;
+                                        loadRewardedAd();
+                                    }
+                                }
+                        );
                     }
 
                     @Override
@@ -241,9 +238,9 @@ public class MainActivity extends Activity {
         );
     }
 
-    // =========================
+    // =========================================================
     // LOGIN
-    // =========================
+    // =========================================================
 
     private void showLoginScreen() {
 
@@ -252,7 +249,7 @@ public class MainActivity extends Activity {
         LinearLayout root = createRoot();
 
         TextView title = createText(
-                "🇮🇳 Coin Rush India",
+                "COIN RUSH INDIA",
                 30,
                 WHITE,
                 true
@@ -350,15 +347,15 @@ public class MainActivity extends Activity {
 
                 username = user;
 
-                bestScore =
-                        prefs.getInt(
-                                "bestScore",
-                                0
-                        );
-
                 totalCoins =
                         prefs.getInt(
                                 "totalCoins",
+                                0
+                        );
+
+                bestScore =
+                        prefs.getInt(
+                                "bestScore",
                                 0
                         );
 
@@ -381,9 +378,9 @@ public class MainActivity extends Activity {
         setContentView(wrapScroll(root));
     }
 
-    // =========================
+    // =========================================================
     // SIGNUP
-    // =========================
+    // =========================================================
 
     private void showSignupScreen() {
 
@@ -392,7 +389,7 @@ public class MainActivity extends Activity {
         LinearLayout root = createRoot();
 
         TextView title = createText(
-                "🇮🇳 Coin Rush India",
+                "COIN RUSH INDIA",
                 30,
                 WHITE,
                 true
@@ -568,9 +565,9 @@ public class MainActivity extends Activity {
         setContentView(wrapScroll(root));
     }
 
-    // =========================
-    // GAME SCREEN
-    // =========================
+    // =========================================================
+    // MAIN GAME SCREEN
+    // =========================================================
 
     private void showGameScreen() {
 
@@ -590,6 +587,7 @@ public class MainActivity extends Activity {
 
         LinearLayout root = createRoot();
 
+        // TOP ROW
         LinearLayout topRow =
                 new LinearLayout(this);
 
@@ -602,7 +600,7 @@ public class MainActivity extends Activity {
         );
 
         TextView title = createText(
-                "🇮🇳 Coin Rush India",
+                "COIN RUSH INDIA",
                 25,
                 WHITE,
                 true
@@ -647,15 +645,10 @@ public class MainActivity extends Activity {
 
         root.addView(playerText);
 
-        // =========================
         // BALANCE
-        // =========================
-
         balanceButton =
                 createButton(
-                        "💰 BALANCE: "
-                                + totalCoins
-                                + " COINS",
+                        "BALANCE: " + totalCoins + " COINS",
                         GREEN
                 );
 
@@ -670,27 +663,22 @@ public class MainActivity extends Activity {
                     );
 
             balanceButton.setText(
-                    "💰 BALANCE: "
-                            + totalCoins
-                            + " COINS"
+                    "BALANCE: " + totalCoins + " COINS"
             );
 
             Toast.makeText(
                     this,
-                    "💰 Your Balance: "
+                    "Your Balance: "
                             + totalCoins
                             + " coins",
                     Toast.LENGTH_SHORT
             ).show();
         });
 
-        // =========================
         // DAILY BONUS
-        // =========================
-
         Button dailyBonusButton =
                 createButton(
-                        "🎁 DAILY BONUS +100 COINS",
+                        "DAILY BONUS +100 COINS",
                         ORANGE
                 );
 
@@ -711,7 +699,7 @@ public class MainActivity extends Activity {
         if (today.equals(lastBonusDate)) {
 
             dailyBonusButton.setText(
-                    "✅ DAILY BONUS CLAIMED"
+                    "DAILY BONUS CLAIMED"
             );
 
             dailyBonusButton.setEnabled(false);
@@ -755,44 +743,29 @@ public class MainActivity extends Activity {
                     )
                     .apply();
 
-            addHistory(
-                    "🎁 Daily Bonus: +100 coins"
+            updateBalanceUI();
+
+            addCoinHistory(
+                    "+100 DAILY BONUS"
             );
-
-            balanceButton.setText(
-                    "💰 BALANCE: "
-                            + totalCoins
-                            + " COINS"
-            );
-
-            if (totalText != null) {
-
-                totalText.setText(
-                        "TOTAL COINS: "
-                                + totalCoins
-                );
-            }
 
             dailyBonusButton.setText(
-                    "✅ DAILY BONUS CLAIMED"
+                    "DAILY BONUS CLAIMED"
             );
 
             dailyBonusButton.setEnabled(false);
 
             Toast.makeText(
                     this,
-                    "🎁 +100 coins bonus!",
+                    "+100 coins bonus!",
                     Toast.LENGTH_SHORT
             ).show();
         });
 
-        // =========================
         // HISTORY
-        // =========================
-
         Button historyButton =
                 createButton(
-                        "📊 COIN HISTORY",
+                        "COIN HISTORY",
                         Color.rgb(80, 90, 105)
                 );
 
@@ -802,10 +775,20 @@ public class MainActivity extends Activity {
                 v -> showCoinHistory()
         );
 
-        // =========================
-        // SCORE CARD
-        // =========================
+        // WITHDRAWAL
+        Button withdrawButton =
+                createButton(
+                        "WITHDRAW BEP-20",
+                        BLUE
+                );
 
+        root.addView(withdrawButton);
+
+        withdrawButton.setOnClickListener(
+                v -> showWithdrawalScreen()
+        );
+
+        // SCORE CARD
         LinearLayout scoreCard =
                 new LinearLayout(this);
 
@@ -848,8 +831,7 @@ public class MainActivity extends Activity {
 
         totalText =
                 createText(
-                        "TOTAL COINS: "
-                                + totalCoins,
+                        "TOTAL COINS: " + totalCoins,
                         15,
                         GRAY,
                         false
@@ -865,13 +847,10 @@ public class MainActivity extends Activity {
                 )
         );
 
-        // =========================
         // TIMER
-        // =========================
-
         timerText =
                 createText(
-                        "⏱ 30",
+                        "TIME: 30",
                         28,
                         WHITE,
                         true
@@ -885,7 +864,7 @@ public class MainActivity extends Activity {
 
         messageText =
                 createText(
-                        "TAP • COLLECT • RUSH!",
+                        "TAP - COLLECT - RUSH!",
                         17,
                         GRAY,
                         true
@@ -893,15 +872,32 @@ public class MainActivity extends Activity {
 
         root.addView(messageText);
 
-        // =========================
         // ROUND TAP BUTTON
-        // =========================
-
         tapButton =
-                createRoundTapButton();
+                createRoundButton(
+                        "TAP!",
+                        ORANGE
+                );
+
+        LinearLayout.LayoutParams tapParams =
+                new LinearLayout.LayoutParams(
+                        dp(280),
+                        dp(280)
+                );
+
+        tapParams.gravity =
+                Gravity.CENTER;
+
+        tapParams.setMargins(
+                0,
+                dp(10),
+                0,
+                dp(10)
+        );
 
         root.addView(
-                tapButton
+                tapButton,
+                tapParams
         );
 
         tapButton.setOnClickListener(v -> {
@@ -915,13 +911,10 @@ public class MainActivity extends Activity {
             updateScore();
         });
 
-        // =========================
         // REWARDED BUTTON
-        // =========================
-
         rewardButton =
                 createButton(
-                        "🎁 WATCH AD • 2X COINS",
+                        "WATCH AD - 2X COINS",
                         GREEN
                 );
 
@@ -935,10 +928,7 @@ public class MainActivity extends Activity {
                 v -> showRewardedAd()
         );
 
-        // =========================
         // RESTART
-        // =========================
-
         restartButton =
                 createButton(
                         "RESTART GAME",
@@ -955,10 +945,7 @@ public class MainActivity extends Activity {
                 v -> startGame()
         );
 
-        // =========================
         // LOGOUT
-        // =========================
-
         logoutButton.setOnClickListener(v -> {
 
             stopTimer();
@@ -991,64 +978,9 @@ public class MainActivity extends Activity {
                 }, 2000);
     }
 
-    // =========================
-    // ROUND TAP BUTTON
-    // =========================
-
-    private Button createRoundTapButton() {
-
-        Button button =
-                new Button(this);
-
-        button.setText("🪙\nTAP!");
-        button.setTextSize(26);
-        button.setTextColor(WHITE);
-
-        button.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        button.setGravity(
-                Gravity.CENTER
-        );
-
-        button.setAllCaps(false);
-
-        GradientDrawable background =
-                new GradientDrawable();
-
-        background.setColor(ORANGE);
-
-        background.setShape(
-                GradientDrawable.OVAL
-        );
-
-        button.setBackground(background);
-
-        LinearLayout.LayoutParams params =
-                new LinearLayout.LayoutParams(
-                        dp(230),
-                        dp(230)
-                );
-
-        params.gravity = Gravity.CENTER;
-
-        params.setMargins(
-                0,
-                dp(15),
-                0,
-                dp(15)
-        );
-
-        button.setLayoutParams(params);
-
-        return button;
-    }
-
-    // =========================
-    // START GAME
-    // =========================
+    // =========================================================
+    // GAME
+    // =========================================================
 
     private void startGame() {
 
@@ -1059,23 +991,16 @@ public class MainActivity extends Activity {
         gameRunning = true;
 
         if (scoreText != null) {
-
-            scoreText.setText(
-                    "0 COINS"
-            );
+            scoreText.setText("0 COINS");
         }
 
         if (timerText != null) {
-
-            timerText.setText(
-                    "⏱ 30"
-            );
+            timerText.setText("TIME: 30");
         }
 
         if (messageText != null) {
-
             messageText.setText(
-                    "TAP • COLLECT • RUSH!"
+                    "TAP - COLLECT - RUSH!"
             );
         }
 
@@ -1121,7 +1046,7 @@ public class MainActivity extends Activity {
                         if (timerText != null) {
 
                             timerText.setText(
-                                    "⏱ "
+                                    "TIME: "
                                             + seconds
                             );
                         }
@@ -1135,7 +1060,7 @@ public class MainActivity extends Activity {
                         if (timerText != null) {
 
                             timerText.setText(
-                                    "⏱ 0"
+                                    "TIME: 0"
                             );
                         }
 
@@ -1145,10 +1070,6 @@ public class MainActivity extends Activity {
 
         timer.start();
     }
-
-    // =========================
-    // GAME OVER
-    // =========================
 
     private void gameOver() {
 
@@ -1188,12 +1109,13 @@ public class MainActivity extends Activity {
 
         if (coins > 0) {
 
-            addHistory(
-                    "🎮 Game: +" + coins + " coins"
+            addCoinHistory(
+                    "+" + coins + " GAME REWARD"
             );
         }
 
         updateScore();
+        updateBalanceUI();
 
         if (bestText != null) {
 
@@ -1210,19 +1132,10 @@ public class MainActivity extends Activity {
             );
         }
 
-        if (balanceButton != null) {
-
-            balanceButton.setText(
-                    "💰 BALANCE: "
-                            + totalCoins
-                            + " COINS"
-            );
-        }
-
         if (messageText != null) {
 
             messageText.setText(
-                    "🎉 GAME OVER • "
+                    "GAME OVER - "
                             + coins
                             + " COINS!"
             );
@@ -1245,9 +1158,9 @@ public class MainActivity extends Activity {
         showInterstitialAd();
     }
 
-    // =========================
+    // =========================================================
     // DOUBLE COINS
-    // =========================
+    // =========================================================
 
     private void giveDoubleCoins() {
 
@@ -1269,7 +1182,6 @@ public class MainActivity extends Activity {
         totalCoins += bonus;
 
         if (coins > bestScore) {
-
             bestScore = coins;
         }
 
@@ -1284,11 +1196,12 @@ public class MainActivity extends Activity {
                 )
                 .apply();
 
-        addHistory(
-                "🎁 Reward Ad: +" + bonus + " bonus coins"
+        addCoinHistory(
+                "+" + bonus + " AD REWARD"
         );
 
         updateScore();
+        updateBalanceUI();
 
         if (bestText != null) {
 
@@ -1305,35 +1218,25 @@ public class MainActivity extends Activity {
             );
         }
 
-        if (balanceButton != null) {
-
-            balanceButton.setText(
-                    "💰 BALANCE: "
-                            + totalCoins
-                            + " COINS"
-            );
-        }
-
         if (messageText != null) {
 
             messageText.setText(
-                    "🎁 REWARD! Coins doubled!"
+                    "REWARD! Coins doubled!"
             );
         }
 
         Toast.makeText(
                 this,
-                "+" + bonus
-                        + " bonus coins!",
+                "+" + bonus + " bonus coins!",
                 Toast.LENGTH_SHORT
         ).show();
     }
 
-    // =========================
-    // COIN HISTORY SAVE
-    // =========================
+    // =========================================================
+    // COIN HISTORY
+    // =========================================================
 
-    private void addHistory(String entry) {
+    private void addCoinHistory(String entry) {
 
         String oldHistory =
                 prefs.getString(
@@ -1348,19 +1251,17 @@ public class MainActivity extends Activity {
                 ).format(new Date());
 
         String newEntry =
-                "• " + entry
-                        + " — "
-                        + time;
-
-        String newHistory;
+                time
+                        + " - "
+                        + entry;
 
         if (oldHistory.isEmpty()) {
 
-            newHistory = newEntry;
+            oldHistory = newEntry;
 
         } else {
 
-            newHistory =
+            oldHistory =
                     newEntry
                             + "\n"
                             + oldHistory;
@@ -1369,14 +1270,10 @@ public class MainActivity extends Activity {
         prefs.edit()
                 .putString(
                         "coinHistory",
-                        newHistory
+                        oldHistory
                 )
                 .apply();
     }
-
-    // =========================
-    // HISTORY SCREEN
-    // =========================
 
     private void showCoinHistory() {
 
@@ -1391,7 +1288,7 @@ public class MainActivity extends Activity {
 
         TextView title =
                 createText(
-                        "📊 COIN HISTORY",
+                        "COIN HISTORY",
                         28,
                         WHITE,
                         true
@@ -1403,18 +1300,11 @@ public class MainActivity extends Activity {
 
             TextView empty =
                     createText(
-                            "Abhi koi coin history nahi hai.",
+                            "No coin history yet.",
                             17,
                             GRAY,
                             false
                     );
-
-            empty.setPadding(
-                    dp(10),
-                    dp(30),
-                    dp(10),
-                    dp(30)
-            );
 
             root.addView(empty);
 
@@ -1423,7 +1313,7 @@ public class MainActivity extends Activity {
             TextView historyText =
                     createText(
                             history,
-                            17,
+                            16,
                             WHITE,
                             false
                     );
@@ -1433,20 +1323,18 @@ public class MainActivity extends Activity {
             );
 
             historyText.setPadding(
+                    dp(10),
                     dp(15),
-                    dp(15),
-                    dp(15),
+                    dp(10),
                     dp(15)
             );
 
-            root.addView(
-                    historyText
-            );
+            root.addView(historyText);
         }
 
         Button backButton =
                 createButton(
-                        "← BACK TO GAME",
+                        "BACK TO GAME",
                         GRAY
                 );
 
@@ -1461,9 +1349,398 @@ public class MainActivity extends Activity {
         );
     }
 
-    // =========================
-    // SCORE
-    // =========================
+    // =========================================================
+    // BEP-20 WITHDRAWAL
+    // =========================================================
+
+    private void showWithdrawalScreen() {
+
+        stopTimer();
+
+        LinearLayout root =
+                createRoot();
+
+        TextView title =
+                createText(
+                        "BEP-20 WITHDRAWAL",
+                        28,
+                        WHITE,
+                        true
+                );
+
+        root.addView(title);
+
+        TextView balance =
+                createText(
+                        "AVAILABLE: "
+                                + totalCoins
+                                + " COINS",
+                        18,
+                        YELLOW,
+                        true
+                );
+
+        balance.setLayoutParams(
+                marginParams(
+                        0,
+                        15,
+                        0,
+                        20
+                )
+        );
+
+        root.addView(balance);
+
+        TextView info =
+                createText(
+                        "Enter your BEP-20 wallet address.\n"
+                                + "UPI is not used.",
+                        15,
+                        GRAY,
+                        false
+                );
+
+        root.addView(info);
+
+        EditText walletInput =
+                createInput(
+                        "BEP-20 Wallet Address (0x...)"
+                );
+
+        root.addView(walletInput);
+
+        EditText amountInput =
+                createInput(
+                        "Withdrawal Coins"
+                );
+
+        amountInput.setInputType(
+                android.text.InputType.TYPE_CLASS_NUMBER
+        );
+
+        root.addView(amountInput);
+
+        TextView minimum =
+                createText(
+                        "Minimum withdrawal: 100 coins",
+                        14,
+                        GRAY,
+                        false
+                );
+
+        minimum.setLayoutParams(
+                marginParams(
+                        0,
+                        5,
+                        0,
+                        15
+                )
+        );
+
+        root.addView(minimum);
+
+        Button withdrawButton =
+                createButton(
+                        "SUBMIT WITHDRAWAL",
+                        GREEN
+                );
+
+        root.addView(withdrawButton);
+
+        Button withdrawalHistoryButton =
+                createButton(
+                        "WITHDRAWAL HISTORY",
+                        BLUE
+                );
+
+        root.addView(
+                withdrawalHistoryButton
+        );
+
+        Button backButton =
+                createButton(
+                        "BACK TO GAME",
+                        GRAY
+                );
+
+        root.addView(backButton);
+
+        withdrawButton.setOnClickListener(v -> {
+
+            String wallet =
+                    walletInput.getText()
+                            .toString()
+                            .trim();
+
+            String amountText =
+                    amountInput.getText()
+                            .toString()
+                            .trim();
+
+            if (wallet.isEmpty()
+                    || amountText.isEmpty()) {
+
+                Toast.makeText(
+                        this,
+                        "Wallet address aur amount bharo.",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
+            if (!isValidBep20Address(wallet)) {
+
+                Toast.makeText(
+                        this,
+                        "Valid BEP-20 address enter karo.",
+                        Toast.LENGTH_LONG
+                ).show();
+
+                return;
+            }
+
+            int amount;
+
+            try {
+
+                amount =
+                        Integer.parseInt(
+                                amountText
+                        );
+
+            } catch (Exception e) {
+
+                Toast.makeText(
+                        this,
+                        "Amount galat hai.",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
+            if (amount < 100) {
+
+                Toast.makeText(
+                        this,
+                        "Minimum withdrawal 100 coins hai.",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
+            totalCoins =
+                    prefs.getInt(
+                            "totalCoins",
+                            0
+                    );
+
+            if (amount > totalCoins) {
+
+                Toast.makeText(
+                        this,
+                        "Balance kam hai.",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
+            // Coins reserve/deduct
+            totalCoins -= amount;
+
+            prefs.edit()
+                    .putInt(
+                            "totalCoins",
+                            totalCoins
+                    )
+                    .apply();
+
+            String time =
+                    new SimpleDateFormat(
+                            "dd/MM/yyyy HH:mm",
+                            Locale.getDefault()
+                    ).format(new Date());
+
+            String request =
+                    time
+                            + " | "
+                            + amount
+                            + " coins"
+                            + " | "
+                            + wallet
+                            + " | PENDING";
+
+            addWithdrawalHistory(request);
+
+            addCoinHistory(
+                    "-" + amount
+                            + " WITHDRAWAL REQUEST"
+            );
+
+            Toast.makeText(
+                    this,
+                    "Withdrawal request submitted.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            showWithdrawalScreen();
+        });
+
+        withdrawalHistoryButton.setOnClickListener(
+                v -> showWithdrawalHistory()
+        );
+
+        backButton.setOnClickListener(
+                v -> showGameScreen()
+        );
+
+        setContentView(
+                wrapScroll(root)
+        );
+    }
+
+    private boolean isValidBep20Address(
+            String address) {
+
+        if (address.length() != 42) {
+            return false;
+        }
+
+        if (!address.startsWith("0x")
+                && !address.startsWith("0X")) {
+
+            return false;
+        }
+
+        for (int i = 2;
+             i < address.length();
+             i++) {
+
+            char c =
+                    address.charAt(i);
+
+            boolean valid =
+                    (c >= '0' && c <= '9')
+                            || (c >= 'a' && c <= 'f')
+                            || (c >= 'A' && c <= 'F');
+
+            if (!valid) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void addWithdrawalHistory(
+            String entry) {
+
+        String old =
+                prefs.getString(
+                        "withdrawalHistory",
+                        ""
+                );
+
+        if (old.isEmpty()) {
+
+            old = entry;
+
+        } else {
+
+            old =
+                    entry
+                            + "\n"
+                            + old;
+        }
+
+        prefs.edit()
+                .putString(
+                        "withdrawalHistory",
+                        old
+                )
+                .apply();
+    }
+
+    private void showWithdrawalHistory() {
+
+        LinearLayout root =
+                createRoot();
+
+        TextView title =
+                createText(
+                        "WITHDRAWAL HISTORY",
+                        28,
+                        WHITE,
+                        true
+                );
+
+        root.addView(title);
+
+        String history =
+                prefs.getString(
+                        "withdrawalHistory",
+                        ""
+                );
+
+        if (history.isEmpty()) {
+
+            TextView empty =
+                    createText(
+                            "No withdrawal requests yet.",
+                            17,
+                            GRAY,
+                            false
+                    );
+
+            root.addView(empty);
+
+        } else {
+
+            TextView historyText =
+                    createText(
+                            history,
+                            15,
+                            WHITE,
+                            false
+                    );
+
+            historyText.setGravity(
+                    Gravity.START
+            );
+
+            historyText.setPadding(
+                    dp(8),
+                    dp(15),
+                    dp(8),
+                    dp(15)
+            );
+
+            root.addView(historyText);
+        }
+
+        Button backButton =
+                createButton(
+                        "BACK TO WITHDRAWAL",
+                        GRAY
+                );
+
+        root.addView(backButton);
+
+        backButton.setOnClickListener(
+                v -> showWithdrawalScreen()
+        );
+
+        setContentView(
+                wrapScroll(root)
+        );
+    }
+
+    // =========================================================
+    // UI HELPERS
+    // =========================================================
 
     private void updateScore() {
 
@@ -1475,9 +1752,25 @@ public class MainActivity extends Activity {
         }
     }
 
-    // =========================
-    // ROOT
-    // =========================
+    private void updateBalanceUI() {
+
+        if (balanceButton != null) {
+
+            balanceButton.setText(
+                    "BALANCE: "
+                            + totalCoins
+                            + " COINS"
+            );
+        }
+
+        if (totalText != null) {
+
+            totalText.setText(
+                    "TOTAL COINS: "
+                            + totalCoins
+            );
+        }
+    }
 
     private LinearLayout createRoot() {
 
@@ -1504,10 +1797,6 @@ public class MainActivity extends Activity {
         return root;
     }
 
-    // =========================
-    // TEXT
-    // =========================
-
     private TextView createText(
             String text,
             int size,
@@ -1520,9 +1809,7 @@ public class MainActivity extends Activity {
         view.setText(text);
         view.setTextSize(size);
         view.setTextColor(color);
-        view.setGravity(
-                Gravity.CENTER
-        );
+        view.setGravity(Gravity.CENTER);
 
         if (bold) {
 
@@ -1541,10 +1828,6 @@ public class MainActivity extends Activity {
 
         return view;
     }
-
-    // =========================
-    // INPUT
-    // =========================
 
     private EditText createInput(
             String hint) {
@@ -1583,10 +1866,6 @@ public class MainActivity extends Activity {
         return input;
     }
 
-    // =========================
-    // BUTTON
-    // =========================
-
     private Button createButton(
             String text,
             int background) {
@@ -1605,8 +1884,11 @@ public class MainActivity extends Activity {
 
         button.setAllCaps(false);
 
-        button.setBackgroundColor(
-                background
+        button.setBackground(
+                roundedBackground(
+                        background,
+                        18
+                )
         );
 
         LinearLayout.LayoutParams params =
@@ -1627,9 +1909,52 @@ public class MainActivity extends Activity {
         return button;
     }
 
-    // =========================
-    // MARGIN
-    // =========================
+    private Button createRoundButton(
+            String text,
+            int background) {
+
+        Button button =
+                new Button(this);
+
+        button.setText(text);
+        button.setTextSize(28);
+        button.setTextColor(WHITE);
+
+        button.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        button.setAllCaps(false);
+
+        button.setGravity(
+                Gravity.CENTER
+        );
+
+        button.setBackground(
+                roundedBackground(
+                        background,
+                        1000
+                )
+        );
+
+        return button;
+    }
+
+    private GradientDrawable roundedBackground(
+            int color,
+            int radius) {
+
+        GradientDrawable drawable =
+                new GradientDrawable();
+
+        drawable.setColor(color);
+        drawable.setCornerRadius(
+                dp(radius)
+        );
+
+        return drawable;
+    }
 
     private LinearLayout.LayoutParams marginParams(
             int left,
@@ -1653,10 +1978,6 @@ public class MainActivity extends Activity {
         return params;
     }
 
-    // =========================
-    // SCROLL
-    // =========================
-
     private ScrollView wrapScroll(
             LinearLayout root) {
 
@@ -1671,10 +1992,6 @@ public class MainActivity extends Activity {
         return scroll;
     }
 
-    // =========================
-    // DP
-    // =========================
-
     private int dp(int value) {
 
         return (int) (
@@ -1685,9 +2002,9 @@ public class MainActivity extends Activity {
         );
     }
 
-    // =========================
+    // =========================================================
     // PASSWORD HASH
-    // =========================
+    // =========================================================
 
     private String hashPassword(
             String password) {
@@ -1717,7 +2034,6 @@ public class MainActivity extends Activity {
                         );
 
                 if (h.length() == 1) {
-
                     hex.append('0');
                 }
 
@@ -1732,9 +2048,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    // =========================
-    // STOP TIMER
-    // =========================
+    // =========================================================
+    // TIMER
+    // =========================================================
 
     private void stopTimer() {
 
@@ -1744,10 +2060,6 @@ public class MainActivity extends Activity {
             timer = null;
         }
     }
-
-    // =========================
-    // DESTROY
-    // =========================
 
     @Override
     protected void onDestroy() {
