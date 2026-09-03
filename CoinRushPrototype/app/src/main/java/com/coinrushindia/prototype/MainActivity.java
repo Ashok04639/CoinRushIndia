@@ -13,7 +13,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
@@ -55,10 +55,10 @@ public class MainActivity extends Activity {
     private RewardedAd rewardedAd;
 
     private static final String INTERSTITIAL_AD_ID =
-            "ca-app-pub-459015901383755/9228973931";
+            "ca-app-pub-4590159013838755/9228973931";
 
     private static final String REWARDED_AD_ID =
-            "ca-app-pub-459015901383755/5227139421";
+            "ca-app-pub-4590159013838755/5227139421";
 
     private final int BG = Color.rgb(12, 18, 28);
     private final int CARD = Color.rgb(25, 34, 48);
@@ -70,13 +70,15 @@ public class MainActivity extends Activity {
     private final int YELLOW = Color.rgb(255, 215, 60);
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
 
-        prefs = getSharedPreferences(
-                "CoinRushIndia",
-                MODE_PRIVATE
-        );
+    MobileAds.initialize(this, initializationStatus -> {});
+
+    prefs = getSharedPreferences(
+        "CoinRushIndia",
+        MODE_PRIVATE
+    )
 
         username = prefs.getString("username", "");
         bestScore = prefs.getInt("bestScore", 0);
