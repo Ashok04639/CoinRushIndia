@@ -55,10 +55,10 @@ public class MainActivity extends Activity {
     private RewardedAd rewardedAd;
 
     private static final String INTERSTITIAL_AD_ID =
-            "ca-app-pub-459015901387755/9228973931";
+            "ca-app-pub-459015901383755/9228973931";
 
     private static final String REWARDED_AD_ID =
-            "ca-app-pub-459015901387755/5227139421";
+            "ca-app-pub-459015901383755/5227139421";
 
     private final int BG = Color.rgb(12, 18, 28);
     private final int CARD = Color.rgb(25, 34, 48);
