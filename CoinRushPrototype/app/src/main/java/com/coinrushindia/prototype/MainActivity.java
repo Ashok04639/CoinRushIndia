@@ -683,6 +683,71 @@ dailyBonusButton.setOnClickListener(v -> {
             Toast.LENGTH_SHORT
     ).show();
 });
+        Button historyButton = createButton(
+        "📊 COIN HISTORY",
+        Color.rgb(80, 90, 105)
+);
+
+root.addView(historyButton);
+
+historyButton.setOnClickListener(v -> showCoinHistory());
+    }
+        private void showCoinHistory() {
+    String history = prefs.getString(
+            "coinHistory",
+            ""
+    );
+
+    if (history.isEmpty()) {
+        Toast.makeText(
+                this,
+                "Abhi koi coin history nahi hai.",
+                Toast.LENGTH_SHORT
+        ).show();
+        return;
+    }
+
+    LinearLayout root = createRoot();
+
+    TextView title = createText(
+            "📊 COIN HISTORY",
+            28,
+            WHITE,
+            true
+    );
+
+    root.addView(title);
+
+    TextView historyText = createText(
+            history,
+            17,
+            WHITE,
+            false
+    );
+
+    historyText.setGravity(Gravity.START);
+    historyText.setPadding(
+            dp(15),
+            dp(15),
+            dp(15),
+            dp(15)
+    );
+
+    root.addView(historyText);
+
+    Button backButton = createButton(
+            "← BACK TO GAME",
+            GRAY
+    );
+
+    root.addView(backButton);
+
+    backButton.setOnClickListener(
+            v -> showGameScreen()
+    );
+
+    setContentView(wrapScroll(root));
+}());
         LinearLayout scoreCard =
                 new LinearLayout(this);
 
