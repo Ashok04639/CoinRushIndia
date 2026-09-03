@@ -749,7 +749,7 @@ historyButton.setOnClickListener(
     );
 
     setContentView(wrapScroll(root));
-}
+            }
         LinearLayout scoreCard =
                 new LinearLayout(this);
 
