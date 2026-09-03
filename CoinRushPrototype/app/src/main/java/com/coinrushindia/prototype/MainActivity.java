@@ -585,6 +585,26 @@ private void loadRewardedAd() {
         );
 
         root.addView(playerText);
+        Button balanceButton = createButton(
+        "💰 BALANCE: " + totalCoins + " COINS",
+        GREEN
+);
+
+root.addView(balanceButton);
+
+balanceButton.setOnClickListener(v -> {
+    totalCoins = prefs.getInt("totalCoins", 0);
+
+    Toast.makeText(
+            this,
+            "💰 Your Balance: " + totalCoins + " coins",
+            Toast.LENGTH_SHORT
+    ).show();
+
+    balanceButton.setText(
+            "💰 BALANCE: " + totalCoins + " COINS"
+    );
+});
 
         LinearLayout scoreCard =
                 new LinearLayout(this);
