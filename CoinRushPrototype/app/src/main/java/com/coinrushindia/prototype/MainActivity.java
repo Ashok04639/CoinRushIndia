@@ -15,7 +15,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -575,106 +574,29 @@ public class MainActivity extends Activity {
         LinearLayout root = createRoot();
         root.setPadding(dp(10), dp(10), dp(10), dp(18));
 
-        // =========================================================
-        // MAIN DASHBOARD HEADER
-        // Menu + COIN RUSH Logo + Brand + Logout
-        // =========================================================
-
+        // Header: menu + brand + logout
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(0, 0, 0, 0);
 
-        // -------------------------
-        // MENU BUTTON
-        // -------------------------
         TextView menu = createText("â˜°", 27, WHITE, false);
         menu.setGravity(Gravity.CENTER);
+        header.addView(menu, new LinearLayout.LayoutParams(dp(42), dp(52)));
 
-        LinearLayout.LayoutParams menuParams =
-                new LinearLayout.LayoutParams(dp(42), dp(52));
-
-        header.addView(menu, menuParams);
-
-        // -------------------------
-        // COIN RUSH LOGO
-        // -------------------------
-        ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.coin_rush_logo);
-        logo.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        logo.setAdjustViewBounds(true);
-
-        LinearLayout.LayoutParams logoParams =
-                new LinearLayout.LayoutParams(dp(52), dp(52));
-
-        logoParams.gravity = Gravity.CENTER_VERTICAL;
-        logoParams.setMargins(dp(2), 0, dp(6), 0);
-
-        header.addView(logo, logoParams);
-
-        // -------------------------
-        // BRAND TEXT
-        // -------------------------
         LinearLayout brand = new LinearLayout(this);
         brand.setOrientation(LinearLayout.VERTICAL);
-        brand.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView brandTitle =
-                createText("COIN RUSH INDIA", 18, WHITE, true);
-
-        brandTitle.setGravity(
-                Gravity.START | Gravity.CENTER_VERTICAL
-        );
-
-        TextView brandSub =
-                createText("INDIA  â€¢  ELITE REWARDS", 8, ORANGE, true);
-
+        TextView brandTitle = createText("COIN RUSH INDIA", 20, WHITE, true);
+        brandTitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        TextView brandSub = createText("INDIA  â€¢  ELITE REWARDS", 9, ORANGE, true);
         brandSub.setGravity(Gravity.START);
-        brandSub.setLetterSpacing(0.08f);
+        brandSub.setLetterSpacing(0.10f);
+        brand.addView(brandTitle, new LinearLayout.LayoutParams(0, dp(28), 1));
+        brand.addView(brandSub, new LinearLayout.LayoutParams(0, dp(18), 1));
+        header.addView(brand, new LinearLayout.LayoutParams(0, dp(52), 1));
 
-        brand.addView(
-                brandTitle,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(27)
-                )
-        );
-
-        brand.addView(
-                brandSub,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(18)
-                )
-        );
-
-        header.addView(
-                brand,
-                new LinearLayout.LayoutParams(
-                        0,
-                        dp(52),
-                        1
-                )
-        );
-
-        // -------------------------
-        // LOGOUT BUTTON
-        // -------------------------
         logoutButton = createButton("LOGOUT", RED);
         logoutButton.setTextSize(11);
-        logoutButton.setGravity(Gravity.CENTER);
-
-        header.addView(
-                logoutButton,
-                new LinearLayout.LayoutParams(
-                        dp(74),
-                        dp(38)
-                )
-        );
-
-        // -------------------------
-        // ADD HEADER TO DASHBOARD
-        // -------------------------
+        header.addView(logoutButton, new LinearLayout.LayoutParams(dp(74), dp(38)));
         root.addView(header);
 
         // Welcome / elite card
@@ -745,26 +667,17 @@ public class MainActivity extends Activity {
         wealth.addView(coinsArt, new LinearLayout.LayoutParams(dp(115), dp(110)));
         root.addView(wealth, new LinearLayout.LayoutParams(-1, dp(130)));
 
-        // Two stats: best score / total games
+        // Three stats: best / round / games
         LinearLayout stats = new LinearLayout(this);
         stats.setOrientation(LinearLayout.HORIZONTAL);
         stats.setGravity(Gravity.CENTER);
         stats.setPadding(0, dp(6), 0, dp(6));
-
-        stats.addView(
-                miniStatCard("ðŸ†  BEST SCORE", String.valueOf(bestScore), YELLOW),
-                new LinearLayout.LayoutParams(0, dp(66), 1)
-        );
-
-        LinearLayout.LayoutParams gamesParams =
-                new LinearLayout.LayoutParams(0, dp(66), 1);
-        gamesParams.setMargins(dp(5), 0, 0, 0);
-
-        stats.addView(
-                miniStatCard("ðŸŽ®  TOTAL GAMES", String.valueOf(totalGames), GREEN),
-                gamesParams
-        );
-
+        stats.addView(miniStatCard("ðŸ†  BEST SCORE", String.valueOf(bestScore), YELLOW), new LinearLayout.LayoutParams(0, dp(66), 1));
+        LinearLayout round = miniStatCard("â—·  ROUND TIME", "30 SEC", Color.rgb(210, 100, 255));
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(66), 1);
+        rp.setMargins(dp(5), 0, dp(5), 0);
+        stats.addView(round, rp);
+        stats.addView(miniStatCard("ðŸŽ®  TOTAL GAMES", String.valueOf(totalGames), GREEN), new LinearLayout.LayoutParams(0, dp(66), 1));
         root.addView(stats);
 
         // Daily bonus
@@ -1432,10 +1345,7 @@ public class MainActivity extends Activity {
                     ).show();
                     return;
                 }
-                totalCoins = newBalance;
-                prefs.edit().putInt("totalCoins", totalCoins).apply();
-                addCoinHistory("+" + roundCoins + " GAME REWARD");
-                updateBalanceUI();
+                totalCoins = newBalance; prefs.edit().putInt("totalCoins", totalCoins).apply(); addCoinHistory("+"+roundCoins+" GAME REWARD"); updateBalanceUI();
             });
         }
 
@@ -2077,9 +1987,9 @@ public class MainActivity extends Activity {
 
                 if (api.code >= 200 && api.code < 300) {
                     final int balance =
-                            parseIntField(response, "balance_coins", totalCoins + amount);
+                            parseIntField(response, "balance_coins", -1);
 
-                    if (balance < totalCoins) {
+                    if (balance < 0) {
                         mainHandler.post(() -> {
                             if (callback != null) {
                                 callback.onResult(false, totalCoins);
