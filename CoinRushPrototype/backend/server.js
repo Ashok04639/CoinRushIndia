@@ -172,6 +172,29 @@ app.post("/api/v1/auth/login", async (req, res) => {
       return res.status(401).json({ success: false, error: "Invalid username or password" });
     }
 
+    // Reconcile legacy balance BEFORE replacing the account's old device_id.
+    // This fixes accounts created on an earlier installation/device while never
+    // decreasing the authenticated account balance.
+    const legacy = await pool.query(
+      `SELECT device_id, balance_coins, best_score
+       FROM public.player_balances
+       WHERE device_id=$1 OR device_id=$2
+       ORDER BY balance_coins DESC, best_score DESC
+       LIMIT 1`,
+      [account.device_id, device_id.trim()]
+    );
+
+    if (legacy.rows.length) {
+      await pool.query(
+        `UPDATE public.player_accounts
+         SET balance_coins=GREATEST(balance_coins,$1),
+             best_score=GREATEST(best_score,$2),
+             updated_at=NOW()
+         WHERE id=$3`,
+        [legacy.rows[0].balance_coins, legacy.rows[0].best_score, account.id]
+      );
+    }
+
     const token = makeToken();
     const updated = await pool.query(
       `UPDATE public.player_accounts
@@ -179,6 +202,17 @@ app.post("/api/v1/auth/login", async (req, res) => {
        WHERE id=$3
        RETURNING id,username,device_id,balance_coins,best_score,last_daily_bonus`,
       [sha256(token), device_id.trim(), account.id]
+    );
+
+    // Keep the legacy device table in sync with the authenticated account.
+    await pool.query(
+      `INSERT INTO public.player_balances(device_id,balance_coins,best_score)
+       VALUES($1,$2,$3)
+       ON CONFLICT(device_id) DO UPDATE SET
+         balance_coins=EXCLUDED.balance_coins,
+         best_score=EXCLUDED.best_score,
+         updated_at=NOW()`,
+      [updated.rows[0].device_id, updated.rows[0].balance_coins, updated.rows[0].best_score]
     );
 
     res.json({ success: true, token, daily_bonus_claimed_today: dailyClaimedToday(updated.rows[0]), user: responseUser(updated.rows[0]) });
@@ -237,6 +271,22 @@ app.post("/api/v1/auth/me", async (req, res) => {
   try {
     const account = await accountFromToken(req);
     if (!account) return res.status(401).json({ success: false, error: "Session expired" });
+    const legacy = await pool.query(
+      `SELECT balance_coins, best_score FROM public.player_balances WHERE device_id=$1 LIMIT 1`,
+      [account.device_id]
+    );
+    if (legacy.rows.length && (Number(legacy.rows[0].balance_coins) > Number(account.balance_coins) || Number(legacy.rows[0].best_score) > Number(account.best_score))) {
+      const merged = await pool.query(
+        `UPDATE public.player_accounts
+         SET balance_coins=GREATEST(balance_coins,$1),
+             best_score=GREATEST(best_score,$2),
+             updated_at=NOW()
+         WHERE id=$3
+         RETURNING id,username,device_id,balance_coins,best_score,last_daily_bonus`,
+        [legacy.rows[0].balance_coins, legacy.rows[0].best_score, account.id]
+      );
+      return res.json({ success: true, daily_bonus_claimed_today: dailyClaimedToday(merged.rows[0]), user: responseUser(merged.rows[0]) });
+    }
     await pool.query(`UPDATE public.player_accounts SET updated_at=NOW() WHERE id=$1`, [account.id]);
     res.json({ success: true, daily_bonus_claimed_today: dailyClaimedToday(account), user: responseUser(account) });
   } catch (error) {
