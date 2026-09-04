@@ -350,6 +350,10 @@ public class MainActivity extends Activity {
                 .apply();
         showGameScreen();
         Toast.makeText(this, "Welcome, " + user + "!", Toast.LENGTH_SHORT).show();
+
+        // Final authoritative balance reconciliation. This also imports any
+        // older device-based balance into the authenticated cloud account.
+        syncAccountNow();
     }
 
     private void showResetPasswordDialog() {
@@ -555,7 +559,7 @@ public class MainActivity extends Activity {
         bestScore = prefs.getInt("bestScore", 0);
 
         LinearLayout root = createRoot();
-        root.setPadding(dp(10), dp(3), dp(10), dp(5));
+        root.setPadding(dp(10), dp(10), dp(10), dp(12));
 
         // ---------- PREMIUM HEADER ----------
         LinearLayout header = new LinearLayout(this);
@@ -600,7 +604,7 @@ public class MainActivity extends Activity {
         totalText = createText("AVAILABLE REWARD BALANCE", 9, GRAY, false);
         wealthCard.addView(totalText);
 
-        root.addView(wealthCard, new LinearLayout.LayoutParams(-1, dp(64)));
+        root.addView(wealthCard, new LinearLayout.LayoutParams(-1, dp(76)));
 
         // ---------- QUICK STATS ----------
         LinearLayout stats = new LinearLayout(this);
@@ -610,9 +614,9 @@ public class MainActivity extends Activity {
 
         LinearLayout bestCard = miniStatCard("BEST SCORE", String.valueOf(bestScore), YELLOW);
         LinearLayout roundCard = miniStatCard("ROUND", "30 SEC", ORANGE);
-        stats.addView(bestCard, new LinearLayout.LayoutParams(0, dp(50), 1));
+        stats.addView(bestCard, new LinearLayout.LayoutParams(0, dp(58), 1));
 
-        LinearLayout.LayoutParams rc = new LinearLayout.LayoutParams(0, dp(50), 1);
+        LinearLayout.LayoutParams rc = new LinearLayout.LayoutParams(0, dp(58), 1);
         rc.setMargins(dp(6), 0, 0, 0);
         stats.addView(roundCard, rc);
         root.addView(stats);
@@ -795,7 +799,7 @@ public class MainActivity extends Activity {
             updateScore();
         });
 
-        root.addView(gameCard, new LinearLayout.LayoutParams(-1, dp(195)));
+        root.addView(gameCard, new LinearLayout.LayoutParams(-1, dp(235)));
 
         logoutButton.setOnClickListener(v -> {
             stopTimer();
@@ -877,63 +881,15 @@ public class MainActivity extends Activity {
 
         new Thread(() -> {
             try {
-                ApiResponse api = postJson("/auth/me", "{}", token);
+                ApiResponse accountApi = postJson("/auth/me", "{}", token);
 
-                if (api.code >= 200 && api.code < 300) {
-                    final int balance = parseIntField(api.body, "balance_coins", -1);
-                    final int best = parseIntField(api.body, "best_score", -1);
-                    final boolean claimed =
-                            parseBooleanField(
-                                    api.body,
-                                    "daily_bonus_claimed_today",
-                                    false
-                            );
-
-                    if (balance < 0 || best < 0) {
-                        throw new Exception("Invalid balance response");
-                    }
-
-                    mainHandler.post(() -> {
-                        // Never let an older refresh overwrite a newer coin operation.
-                        if (operationAtStart != balanceOperationVersion) {
-                            if (done != null) done.run();
-                            return;
-                        }
-
-                        totalCoins = balance;
-                        bestScore = best;
-                        authReady = true;
-
-                        prefs.edit()
-                                .putInt("totalCoins", totalCoins)
-                                .putInt("bestScore", bestScore)
-                                .putString(
-                                        "lastDailyBonus",
-                                        claimed
-                                                ? new SimpleDateFormat(
-                                                        "yyyyMMdd",
-                                                        Locale.getDefault()
-                                                ).format(new Date())
-                                                : ""
-                                )
-                                .apply();
-
-                        updateBalanceUI();
-
-                        if (bestText != null) {
-                            bestText.setText("BEST: " + bestScore);
-                        }
-
-                        if (done != null) done.run();
-                    });
-                } else if (api.code == 401) {
+                if (accountApi.code == 401) {
                     authReady = false;
                     mainHandler.post(() -> {
                         prefs.edit()
                                 .remove("authToken")
                                 .putBoolean("loggedIn", false)
                                 .apply();
-
                         showLoginScreen();
                         Toast.makeText(
                                 this,
@@ -941,9 +897,131 @@ public class MainActivity extends Activity {
                                 Toast.LENGTH_LONG
                         ).show();
                     });
-                } else if (done != null) {
-                    mainHandler.post(done);
+                    return;
                 }
+
+                if (accountApi.code < 200 || accountApi.code >= 300) {
+                    if (done != null) mainHandler.post(done);
+                    return;
+                }
+
+                int accountBalance = parseIntField(accountApi.body, "balance_coins", -1);
+                int accountBest = parseIntField(accountApi.body, "best_score", -1);
+                boolean claimed = parseBooleanField(
+                        accountApi.body,
+                        "daily_bonus_claimed_today",
+                        false
+                );
+
+                if (accountBalance < 0 || accountBest < 0) {
+                    throw new Exception("Invalid account balance response");
+                }
+
+                // Safe legacy reconciliation:
+                // only the current device's old balance can be imported,
+                // and only the positive difference is added to the account.
+                int finalBalance = accountBalance;
+                int finalBest = accountBest;
+
+                try {
+                    String deviceId = getDeviceIdValue();
+                    ApiResponse legacyApi = getJson(
+                            "/user/" + java.net.URLEncoder.encode(
+                                    deviceId,
+                                    "UTF-8"
+                            )
+                    );
+
+                    if (legacyApi.code >= 200 && legacyApi.code < 300) {
+                        int legacyBalance = parseIntField(
+                                legacyApi.body,
+                                "balance_coins",
+                                0
+                        );
+                        int legacyBest = parseIntField(
+                                legacyApi.body,
+                                "best_score",
+                                0
+                        );
+
+                        if (legacyBalance > finalBalance) {
+                            int difference = legacyBalance - finalBalance;
+
+                            ApiResponse repairApi = postJson(
+                                    "/coins/add",
+                                    "{\"coins\":" + difference + "}",
+                                    token
+                            );
+
+                            if (repairApi.code >= 200 && repairApi.code < 300) {
+                                int repairedBalance = parseIntField(
+                                        repairApi.body,
+                                        "balance_coins",
+                                        -1
+                                );
+                                if (repairedBalance >= 0) {
+                                    finalBalance = repairedBalance;
+                                }
+                            }
+                        }
+
+                        if (legacyBest > finalBest) {
+                            finalBest = legacyBest;
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // Account balance remains authoritative if legacy repair
+                    // is unavailable.
+                }
+
+                final int shownBalance = finalBalance;
+                final int shownBest = finalBest;
+                final boolean shownClaimed = claimed;
+
+                mainHandler.post(() -> {
+                    // Never let an older refresh overwrite a newer coin operation.
+                    if (operationAtStart != balanceOperationVersion) {
+                        if (done != null) done.run();
+                        return;
+                    }
+
+                    totalCoins = shownBalance;
+                    bestScore = shownBest;
+                    authReady = true;
+
+                    prefs.edit()
+                            .putInt("totalCoins", totalCoins)
+                            .putInt("bestScore", bestScore)
+                            .putString(
+                                    "lastDailyBonus",
+                                    shownClaimed
+                                            ? new SimpleDateFormat(
+                                                    "yyyyMMdd",
+                                                    Locale.getDefault()
+                                            ).format(new Date())
+                                            : ""
+                            )
+                            .apply();
+
+                    updateBalanceUI();
+
+                    if (bestText != null) {
+                        bestText.setText("BEST: " + bestScore);
+                    }
+
+                    if (totalText != null) {
+                        totalText.setText(
+                                "AVAILABLE REWARD BALANCE: " + totalCoins
+                        );
+                    }
+
+                    if (wealthBalanceText != null) {
+                        wealthBalanceText.setText(totalCoins + " COINS");
+                    }
+
+                    if (done != null) done.run();
+                });
+
             } catch (Exception ex) {
                 if (done != null) mainHandler.post(done);
             }
@@ -1073,7 +1151,14 @@ public class MainActivity extends Activity {
         if (coins > 0) {
             final int roundCoins = coins;
             addCoinsToServer(roundCoins, "GAME REWARD", (success, newBalance) -> {
-                if (!success) { Toast.makeText(this,"Game reward save nahi hua.",Toast.LENGTH_LONG).show(); return; }
+                if (!success) {
+                    Toast.makeText(
+                            this,
+                            "Game reward server par save nahi hua. Refresh Balance dabayein.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
                 totalCoins = newBalance; prefs.edit().putInt("totalCoins", totalCoins).apply(); addCoinHistory("+"+roundCoins+" GAME REWARD"); updateBalanceUI();
             });
         }
@@ -1091,7 +1176,7 @@ public class MainActivity extends Activity {
         if (totalText != null) {
 
             totalText.setText(
-                    "TOTAL COINS: "
+                    "AVAILABLE REWARD BALANCE: "
                             + totalCoins
             );
         }
@@ -1664,6 +1749,21 @@ public class MainActivity extends Activity {
         String generated="android-"+UUID.randomUUID().toString().replace("-","");
         prefs.edit().putString("stableDeviceId",generated).apply();
         return generated;
+    }
+
+    private ApiResponse getJson(String path) throws Exception {
+        HttpURLConnection c = null;
+        try {
+            URL url = new URL(API_BASE_URL + path);
+            c = (HttpURLConnection) url.openConnection();
+            c.setRequestMethod("GET");
+            c.setConnectTimeout(20000);
+            c.setReadTimeout(20000);
+            int code = c.getResponseCode();
+            return new ApiResponse(code, readResponse(c));
+        } finally {
+            if (c != null) c.disconnect();
+        }
     }
 
     private ApiResponse postJson(String path, String body, String token) throws Exception {
