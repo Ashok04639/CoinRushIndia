@@ -697,7 +697,7 @@ public class MainActivity extends Activity {
         Button refresh = createCompactButton("⟳  REFRESH BALANCE", BLUE);
         Button history = createCompactButton("▣  COIN HISTORY", Color.rgb(110, 55, 150));
         utility.addView(refresh, new LinearLayout.LayoutParams(0, dp(48), 1));
-        LinearLayout hp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, dp(48), 1);
         hp.setMargins(dp(5), 0, 0, 0);
         utility.addView(history, hp);
         root.addView(utility, marginParams(0, 2, 0, 4));
@@ -950,7 +950,7 @@ public class MainActivity extends Activity {
         restartButton = createCompactButton("PLAY AGAIN", RED);
         restartButton.setVisibility(View.GONE);
         buttons.addView(rewardButton, new LinearLayout.LayoutParams(0, dp(44), 1));
-        LinearLayout rlp = new LinearLayout.LayoutParams(0, dp(44), 1); rlp.setMargins(dp(5),0,0,0);
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, dp(44), 1); rlp.setMargins(dp(5),0,0,0);
         buttons.addView(restartButton, rlp);
         bottom.addView(buttons);
         gameCard.addView(bottom);
