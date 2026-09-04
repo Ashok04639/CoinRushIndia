@@ -303,6 +303,7 @@ public class MainActivity extends Activity {
             }
             loginButton.setEnabled(false);
             loginButton.setText("CONNECTING...");
+            prefs.edit().putString("username", user).apply();
             final String deviceId = getDeviceIdValue();
             new Thread(() -> {
                 try {
@@ -409,11 +410,27 @@ public class MainActivity extends Activity {
                     mainHandler.post(() -> { username = user; totalCoins = balance; bestScore = best; authReady = true; prefs.edit().putString("username", user).putInt("totalCoins", balance).putInt("bestScore", best)
                             .putString("lastDailyBonus", claimed ? new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date()) : "")
                             .putBoolean("loggedIn", true).apply(); showGameScreen(); });
+                } else if (api.code == 401) {
+                    mainHandler.post(() -> {
+                        prefs.edit().remove("authToken").putBoolean("loggedIn", false).apply();
+                        showLoginScreen();
+                        Toast.makeText(this, "Session expire ho gayi. Ek baar login karein.", Toast.LENGTH_LONG).show();
+                    });
                 } else {
-                    mainHandler.post(() -> { prefs.edit().remove("authToken").putBoolean("loggedIn", false).apply(); showLoginScreen(); });
+                    mainHandler.post(() -> {
+                        authReady = true;
+                        showGameScreen();
+                        Toast.makeText(this, "Server temporarily unavailable. Saved account loaded.", Toast.LENGTH_LONG).show();
+                    });
                 }
             } catch (Exception ex) {
-                mainHandler.post(() -> { prefs.edit().remove("authToken").apply(); showLoginScreen(); Toast.makeText(this, "Session verify nahi hui. Dobara login karein.", Toast.LENGTH_LONG).show(); });
+                // Keep the saved session on temporary network/Render cold-start errors.
+                // Cached balance remains visible and the same token can be retried later.
+                mainHandler.post(() -> {
+                    authReady = true;
+                    showGameScreen();
+                    Toast.makeText(this, "Offline mode: saved account loaded. Server reconnect hote hi sync hoga.", Toast.LENGTH_LONG).show();
+                });
             }
         }).start();
     }
@@ -1819,6 +1836,24 @@ public class MainActivity extends Activity {
                         .getDisplayMetrics()
                         .density
         );
+    }
+
+    // =========================================================
+    // JSON ESCAPE
+    // =========================================================
+
+    private String jsonEscape(String value) {
+
+        if (value == null) {
+            return "";
+        }
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t");
     }
 
     // =========================================================
