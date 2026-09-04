@@ -353,9 +353,9 @@ public class MainActivity extends Activity {
         showDashboard();
         Toast.makeText(this, "Welcome, " + user + "!", Toast.LENGTH_SHORT).show();
 
-        // Final authoritative balance reconciliation. This also imports any
-        // older device-based balance into the authenticated cloud account.
-        syncAccountNow();
+        // Login response already contains the authenticated cloud balance.
+        // Do not start another /auth/me + legacy reconciliation request here;
+        // that extra network round-trip made login feel unnecessarily slow.
     }
 
     private void showResetPasswordDialog() {
@@ -772,11 +772,8 @@ public class MainActivity extends Activity {
         setContentView(scroll);
         updateBalanceUI();
 
-        // Reconcile the displayed total with the authenticated cloud account.
-        // This does not change the dashboard layout.
-        if (authReady && !prefs.getString("authToken", "").isEmpty()) {
-            syncAccountNow();
-        }
+        // Balance is already loaded by login/session validation.
+        // Manual "REFRESH BALANCE" performs the full cloud reconciliation when needed.
 
         getWindow().getDecorView().postDelayed(() -> {
             loadInterstitialAd();
@@ -2037,6 +2034,10 @@ public class MainActivity extends Activity {
         ApiResponse(int code, String body) { this.code = code; this.body = body; }
     }
 
+    private interface ServerCoinCallback {
+        void onResult(boolean success, int newBalance);
+    }
+
     private String getDeviceIdValue() {
         String id=Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         if(id!=null && id.trim().length()>=6) return id.trim();
@@ -2047,6 +2048,37 @@ public class MainActivity extends Activity {
         return generated;
     }
 
+    private String readResponse(HttpURLConnection connection) throws Exception {
+        InputStream stream = null;
+        try {
+            int code = connection.getResponseCode();
+            stream = (code >= 200 && code < 400)
+                    ? connection.getInputStream()
+                    : connection.getErrorStream();
+
+            if (stream == null) return "";
+
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8)
+            );
+
+            StringBuilder result = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                result.append(line);
+            }
+            reader.close();
+            return result.toString();
+        } finally {
+            if (stream != null) {
+                try {
+                    stream.close();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
     private ApiResponse getJson(String path) throws Exception {
         HttpURLConnection c = null;
         try {
@@ -2055,6 +2087,8 @@ public class MainActivity extends Activity {
             c.setRequestMethod("GET");
             c.setConnectTimeout(20000);
             c.setReadTimeout(20000);
+            c.setUseCaches(false);
+            c.setRequestProperty("Accept", "application/json");
             int code = c.getResponseCode();
             return new ApiResponse(code, readResponse(c));
         } finally {
@@ -2065,7 +2099,7 @@ public class MainActivity extends Activity {
     private ApiResponse postJson(String path, String body, String token) throws Exception {
         HttpURLConnection c=null;
         try {
-            URL url=new URL(API_BASE_URL+path); c=(HttpURLConnection)url.openConnection(); c.setRequestMethod("POST"); c.setConnectTimeout(20000); c.setReadTimeout(20000); c.setDoOutput(true); c.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+            URL url=new URL(API_BASE_URL+path); c=(HttpURLConnection)url.openConnection(); c.setRequestMethod("POST"); c.setConnectTimeout(20000); c.setReadTimeout(20000); c.setUseCaches(false); c.setDoOutput(true); c.setRequestProperty("Content-Type","application/json; charset=UTF-8"); c.setRequestProperty("Accept","application/json");
             if(token!=null && !token.isEmpty()) c.setRequestProperty("Authorization","Bearer "+token);
             try(OutputStream os=c.getOutputStream()){os.write(body.getBytes(StandardCharsets.UTF_8));}
             int code=c.getResponseCode(); return new ApiResponse(code, readResponse(c));
