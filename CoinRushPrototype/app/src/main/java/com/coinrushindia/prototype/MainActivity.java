@@ -10,9 +10,11 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -769,11 +771,50 @@ public class MainActivity extends Activity {
         messageText = createText("TAP • COLLECT • RUSH", 10, GRAY, true);
         gameCard.addView(messageText, new LinearLayout.LayoutParams(-1, dp(22)));
 
+        // ---------- MULTI-TOUCH TAP ARENA ----------
+        FrameLayout tapArena = new FrameLayout(this);
+        tapArena.setClipChildren(false);
+        tapArena.setClipToPadding(false);
+
+        LinearLayout.LayoutParams arenaParams =
+                new LinearLayout.LayoutParams(-1, dp(150));
+        arenaParams.gravity = Gravity.CENTER;
+        gameCard.addView(tapArena, arenaParams);
+
         tapButton = createRoundButton("TAP!", ORANGE);
-        LinearLayout.LayoutParams tapParams =
-                new LinearLayout.LayoutParams(dp(115), dp(115));
+        tapButton.setTextSize(30);
+        tapButton.setAllCaps(false);
+        tapButton.setClickable(false);
+        tapButton.setFocusable(false);
+
+        FrameLayout.LayoutParams tapParams =
+                new FrameLayout.LayoutParams(dp(145), dp(145));
         tapParams.gravity = Gravity.CENTER;
-        gameCard.addView(tapButton, tapParams);
+        tapArena.addView(tapButton, tapParams);
+
+        tapArena.setOnTouchListener((view, event) -> {
+            if (!gameRunning) return true;
+
+            final int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN ||
+                    action == MotionEvent.ACTION_POINTER_DOWN) {
+
+                // Every new finger-down event earns exactly +1.
+                coins++;
+                updateScore();
+
+                int index = event.getActionIndex();
+                float x = event.getX(index);
+                float y = event.getY(index);
+                showFlyingCoin(tapArena, x, y);
+
+                // Give immediate visual feedback for 4-finger tapping.
+                if (event.getPointerCount() >= 4 && messageText != null) {
+                    messageText.setText("4X MULTI-TOUCH • +1 EACH");
+                }
+            }
+            return true;
+        });
 
         LinearLayout rewardRow = new LinearLayout(this);
         rewardRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -793,13 +834,7 @@ public class MainActivity extends Activity {
         rewardButton.setOnClickListener(v -> showRewardedAd());
         restartButton.setOnClickListener(v -> startGame());
 
-        tapButton.setOnClickListener(v -> {
-            if (!gameRunning) return;
-            coins++;
-            updateScore();
-        });
-
-        root.addView(gameCard, new LinearLayout.LayoutParams(-1, dp(235)));
+        root.addView(gameCard, new LinearLayout.LayoutParams(-1, dp(285)));
 
         logoutButton.setOnClickListener(v -> {
             stopTimer();
@@ -1031,6 +1066,35 @@ public class MainActivity extends Activity {
     // =========================================================
     // GAME
     // =========================================================
+
+    private void showFlyingCoin(FrameLayout arena, float x, float y) {
+        TextView flying = createText("+1", 22, YELLOW, true);
+        flying.setGravity(Gravity.CENTER);
+        flying.setBackground(roundedBackground(Color.rgb(255, 170, 0), 1000));
+        flying.setTextColor(Color.WHITE);
+        flying.setPadding(dp(7), dp(2), dp(7), dp(2));
+        flying.setElevation(dp(8));
+
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                dp(48), dp(36));
+        lp.leftMargin = Math.max(0, (int) x - dp(24));
+        lp.topMargin = Math.max(0, (int) y - dp(18));
+        arena.addView(flying, lp);
+
+        flying.setScaleX(0.65f);
+        flying.setScaleY(0.65f);
+        flying.setAlpha(1f);
+
+        flying.animate()
+                .translationY(-dp(72))
+                .translationX((float) ((Math.random() - 0.5) * dp(44)))
+                .alpha(0f)
+                .scaleX(1.15f)
+                .scaleY(1.15f)
+                .setDuration(650)
+                .withEndAction(() -> arena.removeView(flying))
+                .start();
+    }
 
     private void startGame() {
 
