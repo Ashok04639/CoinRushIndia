@@ -272,7 +272,7 @@ public class MainActivity extends Activity {
         TextView title = createText("COIN RUSH INDIA", 30, WHITE, true);
         root.addView(title);
 
-        TextView brand = createText("TAP â€¢ COLLECT â€¢ RUSH", 13, ORANGE, true);
+        TextView brand = createText("TAP • COLLECT • RUSH", 13, ORANGE, true);
         brand.setLetterSpacing(0.08f);
         root.addView(brand, marginParams(0, 2, 0, 28));
 
@@ -296,7 +296,7 @@ public class MainActivity extends Activity {
         Button resetButton = createButton("RESET PASSWORD", Color.rgb(80, 90, 105));
         root.addView(resetButton);
 
-        TextView secure = createText("SECURE ACCOUNT â€¢ CLOUD BALANCE", 12, GRAY, false);
+        TextView secure = createText("SECURE ACCOUNT • CLOUD BALANCE", 12, GRAY, false);
         root.addView(secure, marginParams(0, 18, 0, 0));
 
         loginButton.setOnClickListener(v -> {
@@ -579,7 +579,7 @@ public class MainActivity extends Activity {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView menu = createText("â˜°", 27, WHITE, false);
+        TextView menu = createText("☰", 27, WHITE, false);
         menu.setGravity(Gravity.CENTER);
         header.addView(menu, new LinearLayout.LayoutParams(dp(42), dp(52)));
 
@@ -587,7 +587,7 @@ public class MainActivity extends Activity {
         brand.setOrientation(LinearLayout.VERTICAL);
         TextView brandTitle = createText("COIN RUSH INDIA", 20, WHITE, true);
         brandTitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        TextView brandSub = createText("INDIA  â€¢  ELITE REWARDS", 9, ORANGE, true);
+        TextView brandSub = createText("INDIA  •  ELITE REWARDS", 9, ORANGE, true);
         brandSub.setGravity(Gravity.START);
         brandSub.setLetterSpacing(0.10f);
         brand.addView(brandTitle, new LinearLayout.LayoutParams(0, dp(28), 1));
@@ -604,7 +604,7 @@ public class MainActivity extends Activity {
         welcome.setGravity(Gravity.CENTER_VERTICAL);
         welcome.setPadding(dp(10), dp(7), dp(8), dp(7));
 
-        TextView crown = createText("â™›", 35, YELLOW, true);
+        TextView crown = createText("♛", 35, YELLOW, true);
         crown.setGravity(Gravity.CENTER);
         GradientDrawable crownBg = new GradientDrawable();
         crownBg.setColor(Color.rgb(10, 17, 25));
@@ -632,7 +632,7 @@ public class MainActivity extends Activity {
         welcomeText.addView(ms);
         welcome.addView(welcomeText, new LinearLayout.LayoutParams(0, dp(58), 1));
 
-        TextView elite = createText("â™¢\nELITE", 11, YELLOW, true);
+        TextView elite = createText("♢\nELITE", 11, YELLOW, true);
         elite.setGravity(Gravity.CENTER);
         GradientDrawable eliteBg = new GradientDrawable();
         eliteBg.setColor(Color.rgb(13, 24, 34));
@@ -650,19 +650,19 @@ public class MainActivity extends Activity {
 
         LinearLayout wealthWords = new LinearLayout(this);
         wealthWords.setOrientation(LinearLayout.VERTICAL);
-        TextView wl = createText("âœ¦  TOTAL WEALTH", 9, GRAY, true);
+        TextView wl = createText("✦  TOTAL WEALTH", 9, GRAY, true);
         wl.setGravity(Gravity.START);
         wl.setLetterSpacing(0.08f);
         wealthWords.addView(wl);
         wealthBalanceText = createText(totalCoins + "\nCOINS", 31, YELLOW, true);
         wealthBalanceText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         wealthWords.addView(wealthBalanceText);
-        TextView rupee = createText("â‰ˆ â‚¹" + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0), 10, GREEN, true);
+        TextView rupee = createText("≈ ₹" + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0), 10, GREEN, true);
         rupee.setGravity(Gravity.START);
         wealthWords.addView(rupee);
         wealth.addView(wealthWords, new LinearLayout.LayoutParams(0, dp(118), 1));
 
-        TextView coinsArt = createText("ðŸª™\nðŸª™  â‚¹", 36, YELLOW, true);
+        TextView coinsArt = createText("🪙\n🪙  ₹", 36, YELLOW, true);
         coinsArt.setGravity(Gravity.CENTER);
         wealth.addView(coinsArt, new LinearLayout.LayoutParams(dp(115), dp(110)));
         root.addView(wealth, new LinearLayout.LayoutParams(-1, dp(130)));
@@ -672,21 +672,21 @@ public class MainActivity extends Activity {
         stats.setOrientation(LinearLayout.HORIZONTAL);
         stats.setGravity(Gravity.CENTER);
         stats.setPadding(0, dp(6), 0, dp(6));
-        stats.addView(miniStatCard("ðŸ†  BEST SCORE", String.valueOf(bestScore), YELLOW), new LinearLayout.LayoutParams(0, dp(66), 1));
-        LinearLayout round = miniStatCard("â—·  ROUND TIME", "30 SEC", Color.rgb(210, 100, 255));
+        stats.addView(miniStatCard("🏆  BEST SCORE", String.valueOf(bestScore), YELLOW), new LinearLayout.LayoutParams(0, dp(66), 1));
+        LinearLayout round = miniStatCard("◷  ROUND TIME", "30 SEC", Color.rgb(210, 100, 255));
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(66), 1);
         rp.setMargins(dp(5), 0, dp(5), 0);
         stats.addView(round, rp);
-        stats.addView(miniStatCard("ðŸŽ®  TOTAL GAMES", String.valueOf(totalGames), GREEN), new LinearLayout.LayoutParams(0, dp(66), 1));
+        stats.addView(miniStatCard("🎮  TOTAL GAMES", String.valueOf(totalGames), GREEN), new LinearLayout.LayoutParams(0, dp(66), 1));
         root.addView(stats);
 
         // Daily bonus
-        Button daily = createCompactButton("ðŸŽ  DAILY BONUS     +100 COINS", GREEN);
+        Button daily = createCompactButton("🎁  DAILY BONUS     +100 COINS", GREEN);
         daily.setTextSize(13);
         root.addView(daily);
         String today = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
         if (today.equals(prefs.getString("lastDailyBonus", ""))) {
-            daily.setText("ðŸŽ  DAILY BONUS     CLAIMED âœ“");
+            daily.setText("🎁  DAILY BONUS     CLAIMED ✓");
             daily.setEnabled(false);
         }
         daily.setOnClickListener(v -> claimDailyBonusFromDashboard(daily));
@@ -694,8 +694,8 @@ public class MainActivity extends Activity {
         // Refresh / history
         LinearLayout utility = new LinearLayout(this);
         utility.setOrientation(LinearLayout.HORIZONTAL);
-        Button refresh = createCompactButton("âŸ³  REFRESH BALANCE", BLUE);
-        Button history = createCompactButton("â–£  COIN HISTORY", Color.rgb(110, 55, 150));
+        Button refresh = createCompactButton("⟳  REFRESH BALANCE", BLUE);
+        Button history = createCompactButton("▣  COIN HISTORY", Color.rgb(110, 55, 150));
         utility.addView(refresh, new LinearLayout.LayoutParams(0, dp(48), 1));
         LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, dp(48), 1);
         hp.setMargins(dp(5), 0, 0, 0);
@@ -706,19 +706,19 @@ public class MainActivity extends Activity {
             refresh.setText("SYNCING...");
             syncAccountNow(() -> {
                 refresh.setEnabled(true);
-                refresh.setText("âŸ³  REFRESH BALANCE");
+                refresh.setText("⟳  REFRESH BALANCE");
                 updateBalanceUI();
                 Toast.makeText(this, "Balance synced: " + totalCoins + " coins", Toast.LENGTH_SHORT).show();
             });
         });
         history.setOnClickListener(v -> showCoinHistory());
 
-        Button withdraw = createCompactButton("â–£   WITHDRAW   â€¢   BEP-20", BLUE);
+        Button withdraw = createCompactButton("▣   WITHDRAW   •   BEP-20", BLUE);
         withdraw.setTextSize(14);
         root.addView(withdraw);
         withdraw.setOnClickListener(v -> showWithdrawalScreen());
 
-        Button watch = createCompactButton("â–£   WATCH AD   â€¢   2X REWARD", YELLOW);
+        Button watch = createCompactButton("▣   WATCH AD   •   2X REWARD", YELLOW);
         watch.setTextColor(Color.BLACK);
         watch.setTextSize(14);
         root.addView(watch);
@@ -734,11 +734,11 @@ public class MainActivity extends Activity {
         LinearLayout arena = roundedCard(Color.rgb(13, 25, 38), 15);
         arena.setOrientation(LinearLayout.VERTICAL);
         arena.setPadding(dp(10), dp(8), dp(10), dp(8));
-        TextView at = createText("âœ¦  LIVE TAP ARENA  âœ¦", 16, ORANGE, true);
+        TextView at = createText("✦  LIVE TAP ARENA  ✦", 16, ORANGE, true);
         arena.addView(at, new LinearLayout.LayoutParams(-1, dp(28)));
-        TextView as = createText("TAP  â€¢  COLLECT  â€¢  RUSH!", 10, GRAY, true);
+        TextView as = createText("TAP  •  COLLECT  •  RUSH!", 10, GRAY, true);
         arena.addView(as, new LinearLayout.LayoutParams(-1, dp(20)));
-        Button play = createButton("â–¶   PLAY NOW", ORANGE);
+        Button play = createButton("▶   PLAY NOW", ORANGE);
         play.setTextSize(22);
         arena.addView(play, marginParams(0, 6, 0, 0));
         TextView tapStart = createText("TAP TO START", 9, WHITE, true);
@@ -750,20 +750,20 @@ public class MainActivity extends Activity {
         LinearLayout nav = roundedCard(Color.rgb(9, 18, 28), 12);
         nav.setGravity(Gravity.CENTER);
         nav.setPadding(0, dp(3), 0, dp(3));
-        nav.addView(navItem("âŒ‚", "Home", true), new LinearLayout.LayoutParams(0, dp(58), 1));
-        nav.addView(navItem("ðŸŽ®", "Games", false), new LinearLayout.LayoutParams(0, dp(58), 1));
-        nav.addView(navItem("ðŸŽ", "Rewards", false), new LinearLayout.LayoutParams(0, dp(58), 1));
-        nav.addView(navItem("â™™", "Profile", false), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("⌂", "Home", true), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("🎮", "Games", false), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("🎁", "Rewards", false), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("♙", "Profile", false), new LinearLayout.LayoutParams(0, dp(58), 1));
         root.addView(nav);
 
         LinearLayout secure = roundedCard(Color.rgb(10, 22, 32), 12);
         secure.setGravity(Gravity.CENTER_VERTICAL);
-        TextView secureIcon = createText("â™œ", 25, YELLOW, true);
+        TextView secureIcon = createText("♜", 25, YELLOW, true);
         secure.addView(secureIcon, new LinearLayout.LayoutParams(dp(45), dp(48)));
-        TextView secureText = createText("SECURE  â€¢  FAST  â€¢  REWARDING\nPlay More  â€¢  Earn More  â€¢  Be a Billionaire", 10, WHITE, true);
+        TextView secureText = createText("SECURE  •  FAST  •  REWARDING\nPlay More  •  Earn More  •  Be a Billionaire", 10, WHITE, true);
         secureText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         secure.addView(secureText, new LinearLayout.LayoutParams(0, dp(48), 1));
-        TextView gold = createText("ðŸª™ðŸª™", 20, YELLOW, true);
+        TextView gold = createText("🪙🪙", 20, YELLOW, true);
         secure.addView(gold, new LinearLayout.LayoutParams(dp(60), dp(48)));
         root.addView(secure, marginParams(0, 5, 0, 0));
 
@@ -788,7 +788,7 @@ public class MainActivity extends Activity {
         }
         String currentDate = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
         if (currentDate.equals(prefs.getString("lastDailyBonus", ""))) {
-            daily.setText("ðŸŽ  DAILY BONUS     CLAIMED âœ“");
+            daily.setText("🎁  DAILY BONUS     CLAIMED ✓");
             daily.setEnabled(false);
             return;
         }
@@ -805,7 +805,7 @@ public class MainActivity extends Activity {
                         totalCoins = newBalance;
                         prefs.edit().putInt("totalCoins", totalCoins).putString("lastDailyBonus", currentDate).apply();
                         addCoinHistory("+100 DAILY BONUS");
-                        daily.setText("ðŸŽ  DAILY BONUS     CLAIMED âœ“");
+                        daily.setText("🎁  DAILY BONUS     CLAIMED ✓");
                         daily.setEnabled(false);
                         updateBalanceUI();
                         Toast.makeText(this, "+100 coins added successfully!", Toast.LENGTH_SHORT).show();
@@ -814,7 +814,7 @@ public class MainActivity extends Activity {
                     mainHandler.post(() -> {
                         if (operation != balanceOperationVersion) return;
                         daily.setEnabled(true);
-                        daily.setText("ðŸŽ  DAILY BONUS     +100 COINS");
+                        daily.setText("🎁  DAILY BONUS     +100 COINS");
                         Toast.makeText(this, friendlyAuthError(api.body), Toast.LENGTH_LONG).show();
                     });
                 }
@@ -822,7 +822,7 @@ public class MainActivity extends Activity {
                 mainHandler.post(() -> {
                     if (operation != balanceOperationVersion) return;
                     daily.setEnabled(true);
-                    daily.setText("ðŸŽ  DAILY BONUS     +100 COINS");
+                    daily.setText("🎁  DAILY BONUS     +100 COINS");
                     Toast.makeText(this, "Server unavailable. Dobara try karein.", Toast.LENGTH_LONG).show();
                 });
             }
@@ -863,13 +863,13 @@ public class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        Button back = createButton("â€¹", Color.TRANSPARENT);
+        Button back = createButton("‹", Color.TRANSPARENT);
         back.setTextSize(30);
         header.addView(back, new LinearLayout.LayoutParams(dp(52), dp(50)));
         TextView title = createText("LIVE TAP ARENA", 22, ORANGE, true);
         title.setGravity(Gravity.CENTER);
         header.addView(title, new LinearLayout.LayoutParams(0, dp(50), 1));
-        TextView sound = createText("â—–", 25, WHITE, false);
+        TextView sound = createText("◖", 25, WHITE, false);
         sound.setGravity(Gravity.CENTER);
         header.addView(sound, new LinearLayout.LayoutParams(dp(52), dp(50)));
         root.addView(header);
@@ -882,7 +882,7 @@ public class MainActivity extends Activity {
         LinearLayout scoreCard = roundedCard(Color.rgb(10, 20, 31), 11);
         scoreCard.setOrientation(LinearLayout.VERTICAL);
         scoreCard.setGravity(Gravity.CENTER);
-        scoreCard.addView(createText("â€¢ SCORE", 9, GRAY, true));
+        scoreCard.addView(createText("• SCORE", 9, GRAY, true));
         scoreText = createText("0", 22, YELLOW, true);
         scoreCard.addView(scoreText);
         info.addView(scoreCard, new LinearLayout.LayoutParams(0, dp(66), 1));
@@ -890,7 +890,7 @@ public class MainActivity extends Activity {
         LinearLayout timeCard = roundedCard(Color.rgb(10, 20, 31), 11);
         timeCard.setOrientation(LinearLayout.VERTICAL);
         timeCard.setGravity(Gravity.CENTER);
-        timeCard.addView(createText("â€¢ TIME", 9, GRAY, true));
+        timeCard.addView(createText("• TIME", 9, GRAY, true));
         timerText = createText("30", 22, RED, true);
         timeCard.addView(timerText);
         LinearLayout.LayoutParams timeParams = new LinearLayout.LayoutParams(0, dp(66), 1);
@@ -900,7 +900,7 @@ public class MainActivity extends Activity {
         LinearLayout bestCard = roundedCard(Color.rgb(10, 20, 31), 11);
         bestCard.setOrientation(LinearLayout.VERTICAL);
         bestCard.setGravity(Gravity.CENTER);
-        bestCard.addView(createText("â€¢ BEST", 9, GRAY, true));
+        bestCard.addView(createText("• BEST", 9, GRAY, true));
         bestText = createText(String.valueOf(bestScore), 22, GREEN, true);
         bestCard.addView(bestText);
         info.addView(bestCard, new LinearLayout.LayoutParams(0, dp(66), 1));
@@ -910,7 +910,7 @@ public class MainActivity extends Activity {
         gameCard.setOrientation(LinearLayout.VERTICAL);
         gameCard.setPadding(dp(7), dp(8), dp(7), dp(8));
 
-        TextView balance = createText("ðŸª™  " + totalCoins, 22, YELLOW, true);
+        TextView balance = createText("🪙  " + totalCoins, 22, YELLOW, true);
         gameCard.addView(balance, new LinearLayout.LayoutParams(-1, dp(44)));
 
         FrameLayout arena = new FrameLayout(this);
@@ -934,18 +934,18 @@ public class MainActivity extends Activity {
                 updateScore();
                 int index = event.getActionIndex();
                 showFlyingCoin(arena, event.getX(index), event.getY(index));
-                if (event.getPointerCount() >= 4 && messageText != null) messageText.setText("4X MULTI-TOUCH  â€¢  +1 EACH");
+                if (event.getPointerCount() >= 4 && messageText != null) messageText.setText("4X MULTI-TOUCH  •  +1 EACH");
             }
             return true;
         });
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.VERTICAL);
-        messageText = createText("TAP  â€¢  COLLECT  â€¢  RUSH!", 12, GRAY, true);
+        messageText = createText("TAP  •  COLLECT  •  RUSH!", 12, GRAY, true);
         bottom.addView(messageText);
         LinearLayout buttons = new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
-        rewardButton = createCompactButton("WATCH AD  â€¢  2X", GREEN);
+        rewardButton = createCompactButton("WATCH AD  •  2X", GREEN);
         rewardButton.setVisibility(View.GONE);
         restartButton = createCompactButton("PLAY AGAIN", RED);
         restartButton.setVisibility(View.GONE);
@@ -970,7 +970,7 @@ public class MainActivity extends Activity {
         LinearLayout card = roundedCard(Color.rgb(10, 20, 31), 11);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        TextView l = createText("â€¢ " + label, 9, GRAY, true);
+        TextView l = createText("• " + label, 9, GRAY, true);
         TextView v = createText(value, 22, color, true);
         card.addView(l); card.addView(v);
         return card;
