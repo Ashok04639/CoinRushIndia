@@ -101,6 +101,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
+
         MobileAds.initialize(this, initializationStatus -> {});
 
         prefs = getSharedPreferences(
@@ -112,11 +116,17 @@ public class MainActivity extends Activity {
         bestScore = prefs.getInt("bestScore", 0);
         totalCoins = prefs.getInt("totalCoins", 0);
 
-        if (prefs.getBoolean("loggedIn", false)
-                && !username.isEmpty()) {
+        String savedPassword = prefs.getString("password", "");
+        boolean explicitlyLoggedOut = prefs.getBoolean("explicitLogout", false);
 
+        // Keep the player logged in across normal app restarts.
+        // Only the LOGOUT button should force the login screen.
+        if (!username.isEmpty()
+                && !savedPassword.isEmpty()
+                && !explicitlyLoggedOut) {
+
+            prefs.edit().putBoolean("loggedIn", true).apply();
             showGameScreen();
-            // Sync only after the game screen/views are ready.
             syncUserWithServer();
 
         } else {
@@ -280,6 +290,15 @@ public class MainActivity extends Activity {
 
         root.addView(title);
 
+        TextView brandLine = createText(
+                "TAP • COLLECT • RUSH",
+                12,
+                ORANGE,
+                true
+        );
+        brandLine.setLetterSpacing(0.08f);
+        root.addView(brandLine);
+
         TextView subtitle = createText(
                 "LOGIN TO PLAY",
                 15,
@@ -322,6 +341,14 @@ public class MainActivity extends Activity {
 
         root.addView(signupButton);
 
+        Button resetButton = createButton(
+                "RESET PASSWORD",
+                Color.rgb(95, 105, 125)
+        );
+        root.addView(resetButton);
+
+        resetButton.setOnClickListener(v -> showResetPasswordDialog());
+
         loginButton.setOnClickListener(v -> {
 
             String user =
@@ -356,16 +383,26 @@ public class MainActivity extends Activity {
                             ""
                     );
 
-            if (savedUser.equals(user)
-                    && savedPassword.equals(
-                    hashPassword(pass)
-            )) {
+            String hashedInput = hashPassword(pass);
+
+            // Support both the current SHA-256 password format and any
+            // older local account that may have stored the password directly.
+            boolean passwordMatches =
+                    savedPassword.equals(hashedInput)
+                            || savedPassword.equals(pass);
+
+            if (savedUser.equals(user) && passwordMatches) {
+
+                // Upgrade an older/plain local password to SHA-256 immediately.
+                if (!savedPassword.equals(hashedInput)) {
+                    prefs.edit()
+                            .putString("password", hashedInput)
+                            .apply();
+                }
 
                 prefs.edit()
-                        .putBoolean(
-                                "loggedIn",
-                                true
-                        )
+                        .putBoolean("loggedIn", true)
+                        .putBoolean("explicitLogout", false)
                         .apply();
 
                 username = user;
@@ -400,6 +437,58 @@ public class MainActivity extends Activity {
         );
 
         setContentView(wrapScroll(root));
+    }
+
+    private void showResetPasswordDialog() {
+        final EditText newPassword = createInput("New Password");
+        newPassword.setInputType(
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        );
+
+        final EditText confirmPassword = createInput("Confirm New Password");
+        confirmPassword.setInputType(
+                android.text.InputType.TYPE_CLASS_TEXT
+                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        );
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(5), dp(20), 0);
+        box.addView(newPassword);
+        box.addView(confirmPassword);
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("RESET PASSWORD")
+                .setMessage("Set a new password for your saved account.")
+                .setView(box)
+                .setNegativeButton("CANCEL", null)
+                .setPositiveButton("SAVE", (dialog, which) -> {
+                    String user = prefs.getString("username", "");
+                    String pass = newPassword.getText().toString();
+                    String confirm = confirmPassword.getText().toString();
+
+                    if (user.isEmpty()) {
+                        Toast.makeText(this, "Pehle account create karo.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    if (pass.length() < 4 || !pass.equals(confirm)) {
+                        Toast.makeText(this, "Password minimum 4 characters aur same hona chahiye.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    prefs.edit()
+                            .putString("password", hashPassword(pass))
+                            .putBoolean("loggedIn", true)
+                            .putBoolean("explicitLogout", false)
+                            .apply();
+
+                    username = user;
+                    showGameScreen();
+                    syncUserWithServer();
+                    Toast.makeText(this, "Password reset ho gaya.", Toast.LENGTH_SHORT).show();
+                })
+                .show();
     }
 
     // =========================================================
@@ -565,6 +654,10 @@ public class MainActivity extends Activity {
                             "loggedIn",
                             true
                     )
+                    .putBoolean(
+                            "explicitLogout",
+                            false
+                    )
                     .putInt(
                             "bestScore",
                             0
@@ -655,6 +748,15 @@ public class MainActivity extends Activity {
         );
 
         root.addView(topRow);
+
+        TextView brandLine = createText(
+                "TAP • COLLECT • RUSH",
+                11,
+                ORANGE,
+                true
+        );
+        brandLine.setLetterSpacing(0.08f);
+        root.addView(brandLine);
 
         TextView playerText =
                 createText(
@@ -756,10 +858,12 @@ public class MainActivity extends Activity {
             }
 
             dailyBonusButton.setEnabled(false);
+            dailyBonusButton.setText("SAVING BONUS...");
 
             addCoinsToServer(100, "DAILY BONUS", (success, newBalance) -> {
                 if (!success) {
                     dailyBonusButton.setEnabled(true);
+                    dailyBonusButton.setText("DAILY BONUS +100 COINS");
                     Toast.makeText(
                             MainActivity.this,
                             "Bonus save nahi hua. Internet check karo.",
@@ -876,13 +980,11 @@ public class MainActivity extends Activity {
                         false
                 );
 
-        scoreCard.addView(totalText);
-
         root.addView(
                 scoreCard,
                 new LinearLayout.LayoutParams(
                         -1,
-                        dp(130)
+                        dp(112)
                 )
         );
 
@@ -920,8 +1022,8 @@ public class MainActivity extends Activity {
 
         LinearLayout.LayoutParams tapParams =
                 new LinearLayout.LayoutParams(
-                        dp(280),
-                        dp(280)
+                        dp(235),
+                        dp(235)
                 );
 
         tapParams.gravity =
@@ -990,10 +1092,8 @@ public class MainActivity extends Activity {
             stopTimer();
 
             prefs.edit()
-                    .putBoolean(
-                            "loggedIn",
-                            false
-                    )
+                    .putBoolean("loggedIn", false)
+                    .putBoolean("explicitLogout", true)
                     .apply();
 
             username = "";
@@ -1818,7 +1918,15 @@ public class MainActivity extends Activity {
         );
 
         if (id == null || id.trim().length() < 6) {
-            return "android-" + android.os.Build.SERIAL;
+            String saved = prefs.getString("stableDeviceId", "");
+            if (!saved.isEmpty()) {
+                return saved;
+            }
+
+            String generated = "android-" +
+                    java.util.UUID.randomUUID().toString().replace("-", "");
+            prefs.edit().putString("stableDeviceId", generated).apply();
+            return generated;
         }
 
         return id.trim();
@@ -1835,37 +1943,29 @@ public class MainActivity extends Activity {
             HttpURLConnection connection = null;
 
             try {
-                URL url = new URL(API_BASE_URL + "/user");
-                connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("POST");
-                connection.setConnectTimeout(15000);
-                connection.setReadTimeout(15000);
-                connection.setDoOutput(true);
-                connection.setRequestProperty(
-                        "Content-Type",
-                        "application/json; charset=UTF-8"
+                URL url = new URL(
+                        API_BASE_URL + "/user/" + deviceId
                 );
 
-                String body =
-                        "{\"device_id\":\""
-                                + jsonEscape(deviceId)
-                                + "\"}";
-
-                try (OutputStream os = connection.getOutputStream()) {
-                    os.write(body.getBytes(StandardCharsets.UTF_8));
-                }
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(30000);
+                connection.setReadTimeout(30000);
 
                 int code = connection.getResponseCode();
                 String response = readResponse(connection);
 
                 if (code >= 200 && code < 300) {
                     final int serverBalance =
-                            parseIntField(response, "balance_coins", totalCoins);
+                            parseIntField(response, "balance_coins", -1);
                     final int serverBest =
-                            parseIntField(response, "best_score", bestScore);
+                            parseIntField(response, "best_score", -1);
+
+                    if (serverBalance < 0 || serverBest < 0) {
+                        throw new Exception("Invalid server balance response");
+                    }
 
                     mainHandler.post(() -> {
-                        // Ignore stale sync responses. A newer coin update is authoritative.
                         if (requestVersion != syncRequestVersion
                                 || balanceVersionAtStart != balanceUpdateVersion) {
                             return;
@@ -1885,39 +1985,22 @@ public class MainActivity extends Activity {
                         if (bestText != null) {
                             bestText.setText("BEST: " + bestScore);
                         }
-
                         if (totalText != null) {
-                            totalText.setText(
-                                    "TOTAL COINS: " + totalCoins
-                            );
+                            totalText.setText("TOTAL COINS: " + totalCoins);
                         }
                     });
                 } else {
                     mainHandler.post(() -> {
-                        if (requestVersion != syncRequestVersion) {
-                            return;
+                        if (requestVersion == syncRequestVersion) {
+                            serverSyncReady = false;
                         }
-
-                        serverSyncReady = false;
-                        Toast.makeText(
-                                MainActivity.this,
-                                "Server sync nahi hua. Internet check karo.",
-                                Toast.LENGTH_LONG
-                        ).show();
                     });
                 }
             } catch (Exception e) {
                 mainHandler.post(() -> {
-                    if (requestVersion != syncRequestVersion) {
-                        return;
+                    if (requestVersion == syncRequestVersion) {
+                        serverSyncReady = false;
                     }
-
-                    serverSyncReady = false;
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Server sync nahi hua. Internet check karo.",
-                            Toast.LENGTH_LONG
-                    ).show();
                 });
             } finally {
                 if (connection != null) {
@@ -1940,22 +2023,50 @@ public class MainActivity extends Activity {
             String reason,
             ServerCoinCallback callback) {
 
-        final String deviceId = getDeviceIdValue();
+        if (amount <= 0) {
+            if (callback != null) {
+                mainHandler.post(() -> callback.onResult(false, totalCoins));
+            }
+            return;
+        }
 
-        // This coin operation becomes newer than any in-flight sync response.
+        final String deviceId = getDeviceIdValue();
         balanceUpdateVersion++;
         syncRequestVersion++;
-        serverSyncReady = true;
 
         new Thread(() -> {
             HttpURLConnection connection = null;
-
             try {
-                URL url = new URL(API_BASE_URL + "/coins/add");
-                connection = (HttpURLConnection) url.openConnection();
+                // 1) Ensure the player row exists.
+                URL userUrl = new URL(API_BASE_URL + "/user");
+                connection = (HttpURLConnection) userUrl.openConnection();
                 connection.setRequestMethod("POST");
-                connection.setConnectTimeout(15000);
-                connection.setReadTimeout(15000);
+                connection.setConnectTimeout(30000);
+                connection.setReadTimeout(30000);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+
+                String userBody = "{\"device_id\":\"" + jsonEscape(deviceId) + "\"}";
+                try (OutputStream os = connection.getOutputStream()) {
+                    os.write(userBody.getBytes(StandardCharsets.UTF_8));
+                }
+
+                int userCode = connection.getResponseCode();
+                String userResponse = readResponse(connection);
+                connection.disconnect();
+                connection = null;
+
+                if (userCode < 200 || userCode >= 300) {
+                    postCoinResult(callback, false, totalCoins);
+                    return;
+                }
+
+                // 2) Add the coins atomically on the server.
+                URL coinUrl = new URL(API_BASE_URL + "/coins/add");
+                connection = (HttpURLConnection) coinUrl.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(30000);
+                connection.setReadTimeout(30000);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
@@ -1966,34 +2077,37 @@ public class MainActivity extends Activity {
                     os.write(body.getBytes(StandardCharsets.UTF_8));
                 }
 
-                String response = readResponse(connection);
                 int code = connection.getResponseCode();
+                String response = readResponse(connection);
                 boolean success = code >= 200 && code < 300;
-                int newBalance = parseIntField(
-                        response,
-                        "balance_coins",
-                        totalCoins
-                );
+                int newBalance = parseIntField(response, "balance_coins", totalCoins);
 
                 if (success) {
-                    serverSyncReady = true;
+                    final int finalBalance = newBalance;
+                    mainHandler.post(() -> {
+                        totalCoins = finalBalance;
+                        prefs.edit().putInt("totalCoins", totalCoins).apply();
+                        updateBalanceUI();
+                    });
                 }
 
-                if (callback != null) {
-                    final boolean finalSuccess = success;
-                    final int finalBalance = newBalance;
-                    mainHandler.post(() -> callback.onResult(finalSuccess, finalBalance));
-                }
+                postCoinResult(callback, success, newBalance);
+
             } catch (Exception e) {
-                if (callback != null) {
-                    mainHandler.post(() -> callback.onResult(false, totalCoins));
-                }
+                postCoinResult(callback, false, totalCoins);
             } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
+                if (connection != null) connection.disconnect();
             }
         }).start();
+    }
+
+    private void postCoinResult(
+            ServerCoinCallback callback,
+            boolean success,
+            int balance) {
+        if (callback != null) {
+            mainHandler.post(() -> callback.onResult(success, balance));
+        }
     }
 
     private String readResponse(HttpURLConnection connection) throws Exception {
@@ -2119,10 +2233,10 @@ public class MainActivity extends Activity {
         );
 
         root.setPadding(
-                dp(18),
-                dp(18),
-                dp(18),
-                dp(25)
+                dp(14),
+                dp(12),
+                dp(14),
+                dp(18)
         );
 
         root.setBackgroundColor(BG);
