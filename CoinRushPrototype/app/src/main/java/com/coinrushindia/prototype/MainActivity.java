@@ -68,6 +68,9 @@ public class MainActivity extends Activity {
     private Button logoutButton;
     private Button balanceButton;
     private TextView wealthBalanceText;
+    private TextView dashboardValueText;
+    private TextView dashboardBestText;
+    private TextView dashboardGamesText;
 
     private InterstitialAd interstitialAd;
     private RewardedAd rewardedAd;
@@ -655,9 +658,9 @@ public class MainActivity extends Activity {
         wealthBalanceText = createText(totalCoins + "\nCOINS", 31, YELLOW, true);
         wealthBalanceText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         wealthWords.addView(wealthBalanceText);
-        TextView rupee = createText("VALUE: " + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0), 10, GREEN, true);
-        rupee.setGravity(Gravity.START);
-        wealthWords.addView(rupee);
+        dashboardValueText = createText("VALUE: " + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0), 10, GREEN, true);
+        dashboardValueText.setGravity(Gravity.START);
+        wealthWords.addView(dashboardValueText);
         wealth.addView(wealthWords, new LinearLayout.LayoutParams(0, dp(118), 1));
 
         TextView coinsArt = createText("COINS", 28, YELLOW, true);
@@ -670,12 +673,16 @@ public class MainActivity extends Activity {
         stats.setOrientation(LinearLayout.HORIZONTAL);
         stats.setGravity(Gravity.CENTER);
         stats.setPadding(0, dp(6), 0, dp(6));
-        stats.addView(miniStatCard("BEST SCORE", String.valueOf(bestScore), YELLOW), new LinearLayout.LayoutParams(0, dp(66), 1));
+        LinearLayout bestCard = miniStatCard("BEST SCORE", String.valueOf(bestScore), YELLOW);
+        dashboardBestText = (TextView) bestCard.getChildAt(1);
+        stats.addView(bestCard, new LinearLayout.LayoutParams(0, dp(66), 1));
         LinearLayout round = miniStatCard("ROUND TIME", "30 SEC", Color.rgb(210, 100, 255));
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(66), 1);
         rp.setMargins(dp(5), 0, dp(5), 0);
         stats.addView(round, rp);
-        stats.addView(miniStatCard("TOTAL GAMES", String.valueOf(totalGames), GREEN), new LinearLayout.LayoutParams(0, dp(66), 1));
+        LinearLayout gamesCard = miniStatCard("TOTAL GAMES", String.valueOf(totalGames), GREEN);
+        dashboardGamesText = (TextView) gamesCard.getChildAt(1);
+        stats.addView(gamesCard, new LinearLayout.LayoutParams(0, dp(66), 1));
         root.addView(stats);
 
         // Daily bonus
@@ -1411,16 +1418,20 @@ public class MainActivity extends Activity {
             );
         }
 
+        // Save best score locally immediately and also persist it to the
+        // authenticated cloud account. The backend /score endpoint uses
+        // GREATEST(), so an old score can never overwrite a newer best.
         if (coins > bestScore) {
-
             bestScore = coins;
+        }
 
-            prefs.edit()
-                    .putInt(
-                            "bestScore",
-                            bestScore
-                    )
-                    .apply();
+        prefs.edit()
+                .putInt("bestScore", bestScore)
+                .putInt("totalGames", totalGames)
+                .apply();
+
+        if (authReady && !prefs.getString("authToken", "").isEmpty() && coins > 0) {
+            saveBestScoreToServer(coins);
         }
 
         if (coins > 0) {
@@ -1512,7 +1523,7 @@ public class MainActivity extends Activity {
             try {
                 ApiResponse api=postJson("/coins/add","{\"coins\":"+bonus+"}",prefs.getString("authToken",""));
                 String response=api.body;
-                if(api.code>=200 && api.code<300){ int newBalance=parseIntField(response,"balance_coins",totalCoins); mainHandler.post(() -> { coins=coins*2; totalCoins=newBalance; if(coins>bestScore)bestScore=coins; prefs.edit().putInt("bestScore",bestScore).putInt("totalCoins",totalCoins).apply(); addCoinHistory("+"+bonus+" AD REWARD"); updateScore();updateBalanceUI();if(bestText!=null)bestText.setText(String.valueOf(bestScore));if(messageText!=null)messageText.setText("REWARD! Coins doubled!");Toast.makeText(this,"+"+bonus+" bonus coins!",Toast.LENGTH_SHORT).show(); }); }
+                if(api.code>=200 && api.code<300){ int newBalance=parseIntField(response,"balance_coins",totalCoins); mainHandler.post(() -> { coins=coins*2; totalCoins=newBalance; if(coins>bestScore)bestScore=coins; prefs.edit().putInt("bestScore",bestScore).putInt("totalCoins",totalCoins).apply(); saveBestScoreToServer(coins); addCoinHistory("+"+bonus+" AD REWARD"); updateScore();updateBalanceUI();if(bestText!=null)bestText.setText(String.valueOf(bestScore));if(messageText!=null)messageText.setText("REWARD! Coins doubled!");Toast.makeText(this,"+"+bonus+" bonus coins!",Toast.LENGTH_SHORT).show(); }); }
                 else mainHandler.post(() -> Toast.makeText(this,friendlyAuthError(response),Toast.LENGTH_LONG).show());
             } catch(Exception ex){ mainHandler.post(() -> Toast.makeText(this,"Ad reward save nahi hua.",Toast.LENGTH_LONG).show()); }
         }).start();
@@ -2106,6 +2117,34 @@ public class MainActivity extends Activity {
         } finally { if(c!=null)c.disconnect(); }
     }
 
+    private void saveBestScoreToServer(int score) {
+        final String token = prefs.getString("authToken", "");
+        if (token.isEmpty() || score <= 0) return;
+
+        new Thread(() -> {
+            try {
+                ApiResponse api = postJson(
+                        "/score",
+                        "{\"score\":" + score + "}",
+                        token
+                );
+
+                if (api.code >= 200 && api.code < 300) {
+                    int serverBest = parseIntField(api.body, "best_score", score);
+                    mainHandler.post(() -> {
+                        if (serverBest > bestScore) bestScore = serverBest;
+                        prefs.edit().putInt("bestScore", bestScore).apply();
+                        if (bestText != null) {
+                            bestText.setText(String.valueOf(bestScore));
+                        }
+                    });
+                }
+            } catch (Exception ignored) {
+                // Local best score remains saved if the server is temporarily unavailable.
+            }
+        }).start();
+    }
+
     private void addCoinsToServer(int amount, String reason, ServerCoinCallback callback) {
     if (amount <= 0) {
         if (callback != null) {
@@ -2283,11 +2322,18 @@ public class MainActivity extends Activity {
         }
 
         if (totalText != null) {
-
-            totalText.setText(
-                    "TOTAL COINS: "
-                            + totalCoins
+            totalText.setText("TOTAL COINS: " + totalCoins);
+        }
+        if (dashboardValueText != null) {
+            dashboardValueText.setText(
+                    "VALUE: " + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0)
             );
+        }
+        if (dashboardBestText != null) {
+            dashboardBestText.setText(String.valueOf(bestScore));
+        }
+        if (dashboardGamesText != null) {
+            dashboardGamesText.setText(String.valueOf(totalGames));
         }
     }
 
