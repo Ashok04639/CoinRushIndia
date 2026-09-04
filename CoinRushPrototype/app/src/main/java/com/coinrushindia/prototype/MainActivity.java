@@ -618,7 +618,7 @@ public class MainActivity extends Activity {
         welcomeText.addView(wb, new LinearLayout.LayoutParams(-1, dp(21)));
         welcomeText.addView(wn, new LinearLayout.LayoutParams(-1, dp(31)));
         welcomeText.addView(wm, new LinearLayout.LayoutParams(-1, dp(18)));
-        welcomeCard.addView(welcomeText, new LinearLayout.LayoutParams(0, dp(70), 1));
+        welcomeCard.addView(welcomeText, new LinearLayout.LayoutParams(0, dp(100), 1));
 
         TextView elite = createText("◇\nELITE", 13, YELLOW, true);
         elite.setGravity(Gravity.CENTER);
