@@ -29,6 +29,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -41,6 +42,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
+
 public class MainActivity extends Activity {
 
     private android.content.SharedPreferences prefs;
@@ -68,9 +70,6 @@ public class MainActivity extends Activity {
     private Button logoutButton;
     private Button balanceButton;
     private TextView wealthBalanceText;
-    private TextView dashboardValueText;
-    private TextView dashboardBestText;
-    private TextView dashboardGamesText;
 
     private InterstitialAd interstitialAd;
     private RewardedAd rewardedAd;
@@ -273,7 +272,7 @@ public class MainActivity extends Activity {
         TextView title = createText("COIN RUSH INDIA", 30, WHITE, true);
         root.addView(title);
 
-        TextView brand = createText("TAP | COLLECT | RUSH", 13, ORANGE, true);
+        TextView brand = createText("TAP • COLLECT • RUSH", 13, ORANGE, true);
         brand.setLetterSpacing(0.08f);
         root.addView(brand, marginParams(0, 2, 0, 28));
 
@@ -297,7 +296,7 @@ public class MainActivity extends Activity {
         Button resetButton = createButton("RESET PASSWORD", Color.rgb(80, 90, 105));
         root.addView(resetButton);
 
-        TextView secure = createText("SECURE ACCOUNT | CLOUD BALANCE", 12, GRAY, false);
+        TextView secure = createText("SECURE ACCOUNT • CLOUD BALANCE", 12, GRAY, false);
         root.addView(secure, marginParams(0, 18, 0, 0));
 
         loginButton.setOnClickListener(v -> {
@@ -356,9 +355,9 @@ public class MainActivity extends Activity {
         showDashboard();
         Toast.makeText(this, "Welcome, " + user + "!", Toast.LENGTH_SHORT).show();
 
-        // Login response already contains the authenticated cloud balance.
-        // Do not start another /auth/me + legacy reconciliation request here;
-        // that extra network round-trip made login feel unnecessarily slow.
+        // Final authoritative balance reconciliation. This also imports any
+        // older device-based balance into the authenticated cloud account.
+        syncAccountNow();
     }
 
     private void showResetPasswordDialog() {
@@ -561,10 +560,15 @@ public class MainActivity extends Activity {
     // FINAL BILLIONAIRE DASHBOARD
     // =========================================================
 
+    // New dashboard entry point. The previous dashboard is retained below as
+    // showDashboardLegacy() so no existing dashboard/functionality is deleted.
     private void showDashboard() {
+        showModernDashboard();
+    }
+
+    private void showModernDashboard() {
         stopTimer();
 
-        // Always use the latest locally persisted values for an instant dashboard.
         totalCoins = prefs.getInt("totalCoins", 0);
         bestScore = prefs.getInt("bestScore", 0);
         totalGames = prefs.getInt("totalGames", 0);
@@ -572,127 +576,166 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(BG);
-        scroll.setVerticalScrollBarEnabled(false);
 
         LinearLayout root = createRoot();
-        root.setPadding(dp(12), dp(10), dp(12), dp(16));
+        root.setPadding(dp(14), dp(10), dp(14), dp(20));
 
-        // ---------------- HEADER ----------------
+        // =========================================================
+        // PREMIUM HEADER
+        // =========================================================
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView menu = createText("MENU", 11, WHITE, true);
+        TextView menu = createText("MENU", 12, WHITE, true);
         menu.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
         header.addView(menu, new LinearLayout.LayoutParams(dp(52), dp(48)));
 
-        LinearLayout titleBox = new LinearLayout(this);
-        titleBox.setOrientation(LinearLayout.VERTICAL);
-        TextView title = createText("COIN RUSH", 19, YELLOW, true);
-        title.setGravity(Gravity.CENTER);
-        titleBox.addView(title, new LinearLayout.LayoutParams(-1, dp(26)));
-        TextView subtitle = createText("PLAY  |  COLLECT  |  EARN", 7, GRAY, true);
-        subtitle.setGravity(Gravity.CENTER);
-        titleBox.addView(subtitle, new LinearLayout.LayoutParams(-1, dp(18)));
-        header.addView(titleBox, new LinearLayout.LayoutParams(0, dp(48), 1));
+        LinearLayout brand = new LinearLayout(this);
+        brand.setOrientation(LinearLayout.VERTICAL);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView title = createText("COIN RUSH", 22, WHITE, true);
+        title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        TextView subtitle = createText("INDIA  •  ELITE REWARDS", 8, ORANGE, true);
+        subtitle.setGravity(Gravity.START);
+        subtitle.setLetterSpacing(0.10f);
+
+        brand.addView(title, new LinearLayout.LayoutParams(-1, dp(28)));
+        brand.addView(subtitle, new LinearLayout.LayoutParams(-1, dp(18)));
+        header.addView(brand, new LinearLayout.LayoutParams(0, dp(48), 1));
 
         logoutButton = createButton("LOGOUT", RED);
-        logoutButton.setTextSize(10);
-        header.addView(logoutButton, new LinearLayout.LayoutParams(dp(82), dp(40)));
-        root.addView(header);
+        logoutButton.setTextSize(11);
+        header.addView(logoutButton, new LinearLayout.LayoutParams(dp(88), dp(40)));
 
-        // ---------------- WELCOME CARD ----------------
-        LinearLayout welcome = roundedCard(Color.rgb(17, 27, 39), 16);
+        root.addView(header, marginParams(0, 0, 0, 6));
+
+        // =========================================================
+        // WELCOME / ELITE CARD
+        // =========================================================
+        LinearLayout welcome = roundedCard(Color.rgb(17, 28, 41), 16);
         welcome.setGravity(Gravity.CENTER_VERTICAL);
-        welcome.setPadding(dp(10), dp(8), dp(10), dp(8));
+        welcome.setPadding(dp(10), dp(8), dp(8), dp(8));
 
         TextView avatar = createText("$", 27, YELLOW, true);
         avatar.setGravity(Gravity.CENTER);
         GradientDrawable avatarBg = new GradientDrawable();
-        avatarBg.setColor(Color.rgb(9, 17, 26));
-        avatarBg.setShape(GradientDrawable.OVAL);
-        avatarBg.setStroke(dp(2), Color.rgb(255, 190, 45));
+        avatarBg.setColor(Color.rgb(8, 16, 25));
+        avatarBg.setStyle(GradientDrawable.STROKE);
+        avatarBg.setStroke(dp(2), YELLOW);
+        avatarBg.setCornerRadius(dp(60));
         avatar.setBackground(avatarBg);
-        welcome.addView(avatar, new LinearLayout.LayoutParams(dp(58), dp(58)));
+        welcome.addView(avatar, new LinearLayout.LayoutParams(dp(64), dp(64)));
 
         LinearLayout welcomeText = new LinearLayout(this);
         welcomeText.setOrientation(LinearLayout.VERTICAL);
         welcomeText.setPadding(dp(12), 0, dp(5), 0);
-        TextView wb = createText("WELCOME BACK,", 9, GRAY, true);
-        TextView un = createText(username.isEmpty() ? "PLAYER" : username.toUpperCase(Locale.getDefault()), 20, WHITE, true);
-        welcomeText.addView(wb, new LinearLayout.LayoutParams(-1, dp(20)));
-        welcomeText.addView(un, new LinearLayout.LayoutParams(-1, dp(30)));
-        welcome.addView(welcomeText, new LinearLayout.LayoutParams(0, dp(58), 1));
+
+        TextView wb = createText("WELCOME BACK,", 10, GRAY, true);
+        wb.setGravity(Gravity.START);
+        TextView un = createText(
+                username.isEmpty() ? "PLAYER" : username.toUpperCase(Locale.getDefault()),
+                21, WHITE, true);
+        un.setGravity(Gravity.START);
+
+        String memberSince = prefs.getString("memberSince", "");
+        if (memberSince.isEmpty()) {
+            memberSince = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(new Date());
+            prefs.edit().putString("memberSince", memberSince).apply();
+        }
+
+        TextView ms = createText("Member Since: " + memberSince, 8, GRAY, false);
+        ms.setGravity(Gravity.START);
+
+        welcomeText.addView(wb);
+        welcomeText.addView(un);
+        welcomeText.addView(ms);
+        welcome.addView(welcomeText, new LinearLayout.LayoutParams(0, dp(64), 1));
 
         TextView elite = createText("ELITE", 11, YELLOW, true);
         elite.setGravity(Gravity.CENTER);
         GradientDrawable eliteBg = new GradientDrawable();
         eliteBg.setColor(Color.rgb(13, 24, 34));
-        eliteBg.setStroke(dp(2), Color.rgb(255, 190, 45));
+        eliteBg.setStyle(GradientDrawable.STROKE);
+        eliteBg.setStroke(dp(2), YELLOW);
         eliteBg.setCornerRadius(dp(12));
         elite.setBackground(eliteBg);
-        welcome.addView(elite, new LinearLayout.LayoutParams(dp(72), dp(54)));
-        root.addView(welcome, marginParams(0, 6, 0, 8));
+        welcome.addView(elite, new LinearLayout.LayoutParams(dp(68), dp(58)));
 
-        // ---------------- TOTAL WEALTH ----------------
-        LinearLayout wealth = roundedCard(Color.rgb(12, 28, 40), 18);
+        root.addView(welcome, marginParams(0, 2, 0, 8));
+
+        // =========================================================
+        // TOTAL WEALTH
+        // =========================================================
+        LinearLayout wealth = roundedCard(Color.rgb(11, 27, 39), 16);
         wealth.setOrientation(LinearLayout.HORIZONTAL);
         wealth.setGravity(Gravity.CENTER_VERTICAL);
-        wealth.setPadding(dp(14), dp(10), dp(10), dp(10));
+        wealth.setPadding(dp(14), dp(12), dp(10), dp(12));
 
-        LinearLayout wealthWords = new LinearLayout(this);
-        wealthWords.setOrientation(LinearLayout.VERTICAL);
-        TextView wl = createText("TOTAL WEALTH", 10, GRAY, true);
-        wl.setLetterSpacing(0.10f);
-        wealthWords.addView(wl, new LinearLayout.LayoutParams(-1, dp(22)));
+        LinearLayout wealthLeft = new LinearLayout(this);
+        wealthLeft.setOrientation(LinearLayout.VERTICAL);
+
+        TextView wealthLabel = createText("TOTAL WEALTH", 11, GRAY, true);
+        wealthLabel.setGravity(Gravity.START);
+        wealthLabel.setLetterSpacing(0.08f);
+        wealthLeft.addView(wealthLabel);
+
         wealthBalanceText = createText(totalCoins + "\nCOINS", 34, YELLOW, true);
         wealthBalanceText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        wealthWords.addView(wealthBalanceText, new LinearLayout.LayoutParams(-1, dp(72)));
-        dashboardValueText = createText("VALUE: " + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0), 10, GREEN, true);
-        wealthWords.addView(dashboardValueText, new LinearLayout.LayoutParams(-1, dp(20)));
-        wealth.addView(wealthWords, new LinearLayout.LayoutParams(0, dp(114), 1));
+        wealthLeft.addView(wealthBalanceText);
 
-        LinearLayout coinVisual = new LinearLayout(this);
-        coinVisual.setOrientation(LinearLayout.VERTICAL);
+        TextView value = createText(
+                "Approx. INR " + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0),
+                10, GREEN, true);
+        value.setGravity(Gravity.START);
+        wealthLeft.addView(value);
+
+        wealth.addView(wealthLeft, new LinearLayout.LayoutParams(0, dp(132), 1));
+
+        TextView coinVisual = createText("COIN", 28, YELLOW, true);
         coinVisual.setGravity(Gravity.CENTER);
-        TextView coin1 = createText("COIN", 18, YELLOW, true);
-        coin1.setGravity(Gravity.CENTER);
         GradientDrawable coinBg = new GradientDrawable();
-        coinBg.setColor(Color.rgb(52, 40, 8));
-        coinBg.setStroke(dp(2), Color.rgb(255, 210, 55));
-        coinBg.setShape(GradientDrawable.OVAL);
-        coin1.setBackground(coinBg);
-        coinVisual.addView(coin1, new LinearLayout.LayoutParams(dp(76), dp(76)));
-        TextView coinSub = createText("REWARDS", 8, YELLOW, true);
-        coinSub.setGravity(Gravity.CENTER);
-        coinVisual.addView(coinSub, new LinearLayout.LayoutParams(dp(90), dp(22)));
-        wealth.addView(coinVisual, new LinearLayout.LayoutParams(dp(105), dp(114)));
-        root.addView(wealth, new LinearLayout.LayoutParams(-1, dp(132)));
+        coinBg.setColor(Color.rgb(30, 35, 39));
+        coinBg.setStyle(GradientDrawable.STROKE);
+        coinBg.setStroke(dp(2), YELLOW);
+        coinBg.setCornerRadius(dp(70));
+        coinVisual.setBackground(coinBg);
+        wealth.addView(coinVisual, new LinearLayout.LayoutParams(dp(105), dp(105)));
 
-        // ---------------- STATS ----------------
+        root.addView(wealth, new LinearLayout.LayoutParams(-1, dp(146)));
+
+        // =========================================================
+        // STATS
+        // =========================================================
         LinearLayout stats = new LinearLayout(this);
         stats.setOrientation(LinearLayout.HORIZONTAL);
         stats.setGravity(Gravity.CENTER);
         stats.setPadding(0, dp(7), 0, dp(7));
 
-        LinearLayout bestCard = miniStatCard("BEST SCORE", String.valueOf(bestScore), YELLOW);
-        dashboardBestText = (TextView) bestCard.getChildAt(1);
-        stats.addView(bestCard, new LinearLayout.LayoutParams(0, dp(70), 1));
+        stats.addView(
+                miniStatCard("BEST SCORE", String.valueOf(bestScore), YELLOW),
+                new LinearLayout.LayoutParams(0, dp(72), 1));
 
-        LinearLayout round = miniStatCard("ROUND TIME", "30 SEC", Color.rgb(205, 85, 255));
-        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(70), 1);
-        rp.setMargins(dp(5), 0, dp(5), 0);
-        stats.addView(round, rp);
+        LinearLayout round = miniStatCard("ROUND TIME", "30 SEC", Color.rgb(210, 100, 255));
+        LinearLayout.LayoutParams roundParams =
+                new LinearLayout.LayoutParams(0, dp(72), 1);
+        roundParams.setMargins(dp(5), 0, dp(5), 0);
+        stats.addView(round, roundParams);
 
-        LinearLayout gamesCard = miniStatCard("TOTAL GAMES", String.valueOf(totalGames), GREEN);
-        dashboardGamesText = (TextView) gamesCard.getChildAt(1);
-        stats.addView(gamesCard, new LinearLayout.LayoutParams(0, dp(70), 1));
+        stats.addView(
+                miniStatCard("TOTAL GAMES", String.valueOf(totalGames), GREEN),
+                new LinearLayout.LayoutParams(0, dp(72), 1));
+
         root.addView(stats);
 
-        // ---------------- DAILY BONUS ----------------
+        // =========================================================
+        // DAILY BONUS
+        // =========================================================
         Button daily = createCompactButton("DAILY BONUS     +100 COINS", GREEN);
         daily.setTextSize(13);
         root.addView(daily);
+
         String today = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
         if (today.equals(prefs.getString("lastDailyBonus", ""))) {
             daily.setText("DAILY BONUS     CLAIMED");
@@ -700,16 +743,22 @@ public class MainActivity extends Activity {
         }
         daily.setOnClickListener(v -> claimDailyBonusFromDashboard(daily));
 
-        // ---------------- ACTIONS ----------------
+        // =========================================================
+        // UTILITY BUTTONS
+        // =========================================================
         LinearLayout utility = new LinearLayout(this);
         utility.setOrientation(LinearLayout.HORIZONTAL);
+
         Button refresh = createCompactButton("REFRESH BALANCE", BLUE);
         Button history = createCompactButton("COIN HISTORY", Color.rgb(110, 55, 150));
-        utility.addView(refresh, new LinearLayout.LayoutParams(0, dp(48), 1));
-        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, dp(48), 1);
-        hp.setMargins(dp(5), 0, 0, 0);
-        utility.addView(history, hp);
-        root.addView(utility, marginParams(0, 3, 0, 3));
+
+        utility.addView(refresh, new LinearLayout.LayoutParams(0, dp(50), 1));
+        LinearLayout.LayoutParams historyParams =
+                new LinearLayout.LayoutParams(0, dp(50), 1);
+        historyParams.setMargins(dp(5), 0, 0, 0);
+        utility.addView(history, historyParams);
+
+        root.addView(utility, marginParams(0, 2, 0, 4));
 
         refresh.setOnClickListener(v -> {
             refresh.setEnabled(false);
@@ -718,17 +767,276 @@ public class MainActivity extends Activity {
                 refresh.setEnabled(true);
                 refresh.setText("REFRESH BALANCE");
                 updateBalanceUI();
-                Toast.makeText(this, "Balance synced: " + totalCoins + " coins", Toast.LENGTH_SHORT).show();
+                Toast.makeText(
+                        this,
+                        "Balance synced: " + totalCoins + " coins",
+                        Toast.LENGTH_SHORT
+                ).show();
             });
         });
+
         history.setOnClickListener(v -> showCoinHistory());
 
+        // =========================================================
+        // WITHDRAW
+        // =========================================================
         Button withdraw = createCompactButton("WITHDRAW     |     BEP-20", BLUE);
         withdraw.setTextSize(14);
         root.addView(withdraw);
         withdraw.setOnClickListener(v -> showWithdrawalScreen());
 
+        // =========================================================
+        // WATCH AD
+        // =========================================================
         Button watch = createCompactButton("WATCH AD     |     2X REWARD", YELLOW);
+        watch.setTextColor(Color.BLACK);
+        watch.setTextSize(14);
+        root.addView(watch);
+
+        watch.setOnClickListener(v -> {
+            if (coins <= 0) {
+                Toast.makeText(
+                        this,
+                        "Pehle ek game complete karein, phir 2X reward le sakte hain.",
+                        Toast.LENGTH_LONG
+                ).show();
+            } else {
+                showRewardedAd();
+            }
+        });
+
+        // =========================================================
+        // LIVE TAP ARENA
+        // =========================================================
+        LinearLayout arenaCard = roundedCard(Color.rgb(13, 25, 38), 16);
+        arenaCard.setOrientation(LinearLayout.VERTICAL);
+        arenaCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+
+        TextView arenaTitle = createText("LIVE TAP ARENA", 19, ORANGE, true);
+        arenaTitle.setGravity(Gravity.CENTER);
+        arenaCard.addView(arenaTitle, new LinearLayout.LayoutParams(-1, dp(32)));
+
+        TextView arenaSub = createText("TAP  -  COLLECT  -  RUSH!", 10, GRAY, true);
+        arenaSub.setGravity(Gravity.CENTER);
+        arenaCard.addView(arenaSub, new LinearLayout.LayoutParams(-1, dp(22)));
+
+        Button play = createButton("PLAY NOW", ORANGE);
+        play.setTextSize(22);
+        arenaCard.addView(play, marginParams(0, 6, 0, 0));
+
+        TextView tapStart = createText("TAP TO START", 10, WHITE, true);
+        tapStart.setGravity(Gravity.CENTER);
+        arenaCard.addView(tapStart, new LinearLayout.LayoutParams(-1, dp(22)));
+
+        play.setOnClickListener(v -> showGameScreen());
+        root.addView(arenaCard, marginParams(0, 7, 0, 7));
+
+        // =========================================================
+        // BOTTOM NAVIGATION
+        // =========================================================
+        LinearLayout nav = roundedCard(Color.rgb(9, 18, 28), 14);
+        nav.setGravity(Gravity.CENTER);
+        nav.setPadding(0, dp(4), 0, dp(4));
+
+        nav.addView(navItem("HOME", "Home", true),
+                new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("GAME", "Games", false),
+                new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("REWARD", "Rewards", false),
+                new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("USER", "Profile", false),
+                new LinearLayout.LayoutParams(0, dp(58), 1));
+
+        root.addView(nav);
+
+        // =========================================================
+        // TRUST FOOTER
+        // =========================================================
+        LinearLayout secure = roundedCard(Color.rgb(10, 22, 32), 12);
+        secure.setGravity(Gravity.CENTER_VERTICAL);
+        secure.setPadding(dp(8), dp(5), dp(8), dp(5));
+
+        TextView secureText = createText(
+                "SECURE  -  FAST  -  REWARDING\nPLAY MORE  -  EARN MORE  -  COIN RUSH",
+                9, WHITE, true);
+        secureText.setGravity(Gravity.CENTER);
+        secure.addView(secureText, new LinearLayout.LayoutParams(-1, dp(48)));
+
+        root.addView(secure, marginParams(0, 5, 0, 0));
+
+        logoutButton.setOnClickListener(v -> logout());
+        menu.setOnClickListener(v ->
+                Toast.makeText(this, "Coin Rush India", Toast.LENGTH_SHORT).show());
+
+        scroll.addView(root);
+        setContentView(scroll);
+        updateBalanceUI();
+
+        getWindow().getDecorView().postDelayed(() -> {
+            loadInterstitialAd();
+            loadRewardedAd();
+        }, 500);
+    }
+
+    private void showDashboardLegacy() {
+        stopTimer();
+
+        totalCoins = prefs.getInt("totalCoins", 0);
+        bestScore = prefs.getInt("bestScore", 0);
+        totalGames = prefs.getInt("totalGames", 0);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
+
+        LinearLayout root = createRoot();
+        root.setPadding(dp(10), dp(10), dp(10), dp(18));
+
+        // Header: menu + brand + logout
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView menu = createText("☰", 27, WHITE, false);
+        menu.setGravity(Gravity.CENTER);
+        header.addView(menu, new LinearLayout.LayoutParams(dp(42), dp(52)));
+
+        LinearLayout brand = new LinearLayout(this);
+        brand.setOrientation(LinearLayout.VERTICAL);
+        TextView brandTitle = createText("COIN RUSH INDIA", 20, WHITE, true);
+        brandTitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        TextView brandSub = createText("INDIA  •  ELITE REWARDS", 9, ORANGE, true);
+        brandSub.setGravity(Gravity.START);
+        brandSub.setLetterSpacing(0.10f);
+        brand.addView(brandTitle, new LinearLayout.LayoutParams(0, dp(28), 1));
+        brand.addView(brandSub, new LinearLayout.LayoutParams(0, dp(18), 1));
+        header.addView(brand, new LinearLayout.LayoutParams(0, dp(52), 1));
+
+        logoutButton = createButton("LOGOUT", RED);
+        logoutButton.setTextSize(11);
+        header.addView(logoutButton, new LinearLayout.LayoutParams(dp(74), dp(38)));
+        root.addView(header);
+
+        // Welcome / elite card
+        LinearLayout welcome = roundedCard(Color.rgb(17, 27, 39), 14);
+        welcome.setGravity(Gravity.CENTER_VERTICAL);
+        welcome.setPadding(dp(10), dp(7), dp(8), dp(7));
+
+        TextView crown = createText("♛", 35, YELLOW, true);
+        crown.setGravity(Gravity.CENTER);
+        GradientDrawable crownBg = new GradientDrawable();
+        crownBg.setColor(Color.rgb(10, 17, 25));
+        crownBg.setStroke(dp(1), Color.rgb(255, 190, 45));
+        crownBg.setCornerRadius(dp(50));
+        crown.setBackground(crownBg);
+        welcome.addView(crown, new LinearLayout.LayoutParams(dp(58), dp(58)));
+
+        LinearLayout welcomeText = new LinearLayout(this);
+        welcomeText.setOrientation(LinearLayout.VERTICAL);
+        welcomeText.setPadding(dp(10), 0, dp(4), 0);
+        TextView wb = createText("WELCOME BACK,", 10, GRAY, true);
+        wb.setGravity(Gravity.START);
+        TextView un = createText(username.isEmpty() ? "PLAYER" : username.toUpperCase(Locale.getDefault()), 20, WHITE, true);
+        un.setGravity(Gravity.START);
+        String memberSince = prefs.getString("memberSince", "");
+        if (memberSince.isEmpty()) {
+            memberSince = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(new Date());
+            prefs.edit().putString("memberSince", memberSince).apply();
+        }
+        TextView ms = createText("Member Since: " + memberSince, 8, GRAY, false);
+        ms.setGravity(Gravity.START);
+        welcomeText.addView(wb);
+        welcomeText.addView(un);
+        welcomeText.addView(ms);
+        welcome.addView(welcomeText, new LinearLayout.LayoutParams(0, dp(58), 1));
+
+        TextView elite = createText("♢\nELITE", 11, YELLOW, true);
+        elite.setGravity(Gravity.CENTER);
+        GradientDrawable eliteBg = new GradientDrawable();
+        eliteBg.setColor(Color.rgb(13, 24, 34));
+        eliteBg.setStroke(dp(1), Color.rgb(255, 190, 45));
+        eliteBg.setCornerRadius(dp(10));
+        elite.setBackground(eliteBg);
+        welcome.addView(elite, new LinearLayout.LayoutParams(dp(54), dp(54)));
+        root.addView(welcome, marginParams(0, 4, 0, 7));
+
+        // Total wealth card
+        LinearLayout wealth = roundedCard(Color.rgb(13, 27, 39), 12);
+        wealth.setOrientation(LinearLayout.HORIZONTAL);
+        wealth.setGravity(Gravity.CENTER_VERTICAL);
+        wealth.setPadding(dp(12), dp(8), dp(8), dp(8));
+
+        LinearLayout wealthWords = new LinearLayout(this);
+        wealthWords.setOrientation(LinearLayout.VERTICAL);
+        TextView wl = createText("✦  TOTAL WEALTH", 9, GRAY, true);
+        wl.setGravity(Gravity.START);
+        wl.setLetterSpacing(0.08f);
+        wealthWords.addView(wl);
+        wealthBalanceText = createText(totalCoins + "\nCOINS", 31, YELLOW, true);
+        wealthBalanceText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        wealthWords.addView(wealthBalanceText);
+        TextView rupee = createText("≈ ₹" + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0), 10, GREEN, true);
+        rupee.setGravity(Gravity.START);
+        wealthWords.addView(rupee);
+        wealth.addView(wealthWords, new LinearLayout.LayoutParams(0, dp(118), 1));
+
+        TextView coinsArt = createText("🪙\n🪙  ₹", 36, YELLOW, true);
+        coinsArt.setGravity(Gravity.CENTER);
+        wealth.addView(coinsArt, new LinearLayout.LayoutParams(dp(115), dp(110)));
+        root.addView(wealth, new LinearLayout.LayoutParams(-1, dp(130)));
+
+        // Three stats: best / round / games
+        LinearLayout stats = new LinearLayout(this);
+        stats.setOrientation(LinearLayout.HORIZONTAL);
+        stats.setGravity(Gravity.CENTER);
+        stats.setPadding(0, dp(6), 0, dp(6));
+        stats.addView(miniStatCard("🏆  BEST SCORE", String.valueOf(bestScore), YELLOW), new LinearLayout.LayoutParams(0, dp(66), 1));
+        LinearLayout round = miniStatCard("◷  ROUND TIME", "30 SEC", Color.rgb(210, 100, 255));
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, dp(66), 1);
+        rp.setMargins(dp(5), 0, dp(5), 0);
+        stats.addView(round, rp);
+        stats.addView(miniStatCard("🎮  TOTAL GAMES", String.valueOf(totalGames), GREEN), new LinearLayout.LayoutParams(0, dp(66), 1));
+        root.addView(stats);
+
+        // Daily bonus
+        Button daily = createCompactButton("🎁  DAILY BONUS     +100 COINS", GREEN);
+        daily.setTextSize(13);
+        root.addView(daily);
+        String today = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        if (today.equals(prefs.getString("lastDailyBonus", ""))) {
+            daily.setText("🎁  DAILY BONUS     CLAIMED ✓");
+            daily.setEnabled(false);
+        }
+        daily.setOnClickListener(v -> claimDailyBonusFromDashboard(daily));
+
+        // Refresh / history
+        LinearLayout utility = new LinearLayout(this);
+        utility.setOrientation(LinearLayout.HORIZONTAL);
+        Button refresh = createCompactButton("⟳  REFRESH BALANCE", BLUE);
+        Button history = createCompactButton("▣  COIN HISTORY", Color.rgb(110, 55, 150));
+        utility.addView(refresh, new LinearLayout.LayoutParams(0, dp(48), 1));
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        hp.setMargins(dp(5), 0, 0, 0);
+        utility.addView(history, hp);
+        root.addView(utility, marginParams(0, 2, 0, 4));
+        refresh.setOnClickListener(v -> {
+            refresh.setEnabled(false);
+            refresh.setText("SYNCING...");
+            syncAccountNow(() -> {
+                refresh.setEnabled(true);
+                refresh.setText("⟳  REFRESH BALANCE");
+                updateBalanceUI();
+                Toast.makeText(this, "Balance synced: " + totalCoins + " coins", Toast.LENGTH_SHORT).show();
+            });
+        });
+        history.setOnClickListener(v -> showCoinHistory());
+
+        Button withdraw = createCompactButton("▣   WITHDRAW   •   BEP-20", BLUE);
+        withdraw.setTextSize(14);
+        root.addView(withdraw);
+        withdraw.setOnClickListener(v -> showWithdrawalScreen());
+
+        Button watch = createCompactButton("▣   WATCH AD   •   2X REWARD", YELLOW);
         watch.setTextColor(Color.BLACK);
         watch.setTextSize(14);
         root.addView(watch);
@@ -740,39 +1048,124 @@ public class MainActivity extends Activity {
             }
         });
 
-        // ---------------- LIVE TAP ARENA ----------------
-        LinearLayout arena = roundedCard(Color.rgb(13, 25, 38), 18);
+        // Live arena CTA
+        LinearLayout arena = roundedCard(Color.rgb(13, 25, 38), 15);
         arena.setOrientation(LinearLayout.VERTICAL);
-        arena.setPadding(dp(12), dp(10), dp(12), dp(10));
-        TextView at = createText("LIVE TAP ARENA", 17, ORANGE, true);
-        at.setGravity(Gravity.CENTER);
-        arena.addView(at, new LinearLayout.LayoutParams(-1, dp(30)));
-        TextView as = createText("TAP  |  COLLECT  |  RUSH!", 9, GRAY, true);
-        as.setGravity(Gravity.CENTER);
+        arena.setPadding(dp(10), dp(8), dp(10), dp(8));
+        TextView at = createText("✦  LIVE TAP ARENA  ✦", 16, ORANGE, true);
+        arena.addView(at, new LinearLayout.LayoutParams(-1, dp(28)));
+        TextView as = createText("TAP  •  COLLECT  •  RUSH!", 10, GRAY, true);
         arena.addView(as, new LinearLayout.LayoutParams(-1, dp(20)));
-        Button play = createButton("PLAY NOW", ORANGE);
+        Button play = createButton("▶   PLAY NOW", ORANGE);
         play.setTextSize(22);
-        arena.addView(play, marginParams(0, 7, 0, 0));
+        arena.addView(play, marginParams(0, 6, 0, 0));
         TextView tapStart = createText("TAP TO START", 9, WHITE, true);
-        tapStart.setGravity(Gravity.CENTER);
         arena.addView(tapStart, new LinearLayout.LayoutParams(-1, dp(20)));
         play.setOnClickListener(v -> showGameScreen());
-        root.addView(arena, marginParams(0, 7, 0, 8));
+        root.addView(arena, marginParams(0, 6, 0, 6));
 
-        // ---------------- BOTTOM NAV ----------------
-        LinearLayout nav = roundedCard(Color.rgb(9, 17, 27), 14);
+        // Bottom navigation like the reference
+        LinearLayout nav = roundedCard(Color.rgb(9, 18, 28), 12);
         nav.setGravity(Gravity.CENTER);
-        nav.setPadding(0, dp(2), 0, dp(2));
-        nav.addView(navItem("HOME", "Home", true), new LinearLayout.LayoutParams(0, dp(58), 1));
-        nav.addView(navItem("GAME", "Games", false), new LinearLayout.LayoutParams(0, dp(58), 1));
-        nav.addView(navItem("REWARD", "Rewards", false), new LinearLayout.LayoutParams(0, dp(58), 1));
-        nav.addView(navItem("PROFILE", "Profile", false), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.setPadding(0, dp(3), 0, dp(3));
+        nav.addView(navItem("⌂", "Home", true), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("🎮", "Games", false), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("🎁", "Rewards", false), new LinearLayout.LayoutParams(0, dp(58), 1));
+        nav.addView(navItem("♙", "Profile", false), new LinearLayout.LayoutParams(0, dp(58), 1));
         root.addView(nav);
+
+        LinearLayout secure = roundedCard(Color.rgb(10, 22, 32), 12);
+        secure.setGravity(Gravity.CENTER_VERTICAL);
+        TextView secureIcon = createText("♜", 25, YELLOW, true);
+        secure.addView(secureIcon, new LinearLayout.LayoutParams(dp(45), dp(48)));
+        TextView secureText = createText("SECURE  •  FAST  •  REWARDING\nPlay More  •  Earn More  •  Be a Billionaire", 10, WHITE, true);
+        secureText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        secure.addView(secureText, new LinearLayout.LayoutParams(0, dp(48), 1));
+        TextView gold = createText("🪙🪙", 20, YELLOW, true);
+        secure.addView(gold, new LinearLayout.LayoutParams(dp(60), dp(48)));
+        root.addView(secure, marginParams(0, 5, 0, 0));
+
+        logoutButton.setOnClickListener(v -> logout());
+        menu.setOnClickListener(v -> Toast.makeText(this, "Coin Rush India", Toast.LENGTH_SHORT).show());
 
         scroll.addView(root);
         setContentView(scroll);
         updateBalanceUI();
+
+        getWindow().getDecorView().postDelayed(() -> {
+            loadInterstitialAd();
+            loadRewardedAd();
+        }, 500);
     }
+
+    private void claimDailyBonusFromDashboard(Button daily) {
+        if (!authReady || prefs.getString("authToken", "").isEmpty()) {
+            Toast.makeText(this, "Account server se connect ho raha hai. Thoda wait karein.", Toast.LENGTH_LONG).show();
+            syncAccountNow();
+            return;
+        }
+        String currentDate = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        if (currentDate.equals(prefs.getString("lastDailyBonus", ""))) {
+            daily.setText("🎁  DAILY BONUS     CLAIMED ✓");
+            daily.setEnabled(false);
+            return;
+        }
+        final long operation = ++balanceOperationVersion;
+        daily.setEnabled(false);
+        daily.setText("SAVING +100 COINS...");
+        new Thread(() -> {
+            try {
+                ApiResponse api = postJson("/bonus/daily", "{}", prefs.getString("authToken", ""));
+                if (api.code >= 200 && api.code < 300) {
+                    int newBalance = parseIntField(api.body, "balance_coins", -1);
+                    mainHandler.post(() -> {
+                        if (operation != balanceOperationVersion || newBalance < 0) return;
+                        totalCoins = newBalance;
+                        prefs.edit().putInt("totalCoins", totalCoins).putString("lastDailyBonus", currentDate).apply();
+                        addCoinHistory("+100 DAILY BONUS");
+                        daily.setText("🎁  DAILY BONUS     CLAIMED ✓");
+                        daily.setEnabled(false);
+                        updateBalanceUI();
+                        Toast.makeText(this, "+100 coins added successfully!", Toast.LENGTH_SHORT).show();
+                    });
+                } else {
+                    mainHandler.post(() -> {
+                        if (operation != balanceOperationVersion) return;
+                        daily.setEnabled(true);
+                        daily.setText("🎁  DAILY BONUS     +100 COINS");
+                        Toast.makeText(this, friendlyAuthError(api.body), Toast.LENGTH_LONG).show();
+                    });
+                }
+            } catch (Exception ex) {
+                mainHandler.post(() -> {
+                    if (operation != balanceOperationVersion) return;
+                    daily.setEnabled(true);
+                    daily.setText("🎁  DAILY BONUS     +100 COINS");
+                    Toast.makeText(this, "Server unavailable. Dobara try karein.", Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
+    }
+
+    private LinearLayout navItem(String icon, String label, boolean selected) {
+        LinearLayout item = new LinearLayout(this);
+        item.setOrientation(LinearLayout.VERTICAL);
+        item.setGravity(Gravity.CENTER);
+        TextView i = createText(icon, 21, selected ? ORANGE : GRAY, true);
+        TextView l = createText(label, 9, selected ? ORANGE : GRAY, selected);
+        item.addView(i, new LinearLayout.LayoutParams(-1, dp(30)));
+        item.addView(l, new LinearLayout.LayoutParams(-1, dp(20)));
+        item.setOnClickListener(v -> {
+            if (label.equals("Games")) showGameScreen();
+            else if (label.equals("Rewards")) Toast.makeText(this, "Rewards: daily bonus + game rewards", Toast.LENGTH_SHORT).show();
+            else if (label.equals("Profile")) Toast.makeText(this, "Player: " + username, Toast.LENGTH_SHORT).show();
+        });
+        return item;
+    }
+
+    // =========================================================
+    // LIVE TAP ARENA
+    // =========================================================
 
     private void showGameScreen() {
         stopTimer();
@@ -788,13 +1181,13 @@ public class MainActivity extends Activity {
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        Button back = createButton("|", Color.TRANSPARENT);
+        Button back = createButton("‹", Color.TRANSPARENT);
         back.setTextSize(30);
         header.addView(back, new LinearLayout.LayoutParams(dp(52), dp(50)));
         TextView title = createText("LIVE TAP ARENA", 22, ORANGE, true);
         title.setGravity(Gravity.CENTER);
         header.addView(title, new LinearLayout.LayoutParams(0, dp(50), 1));
-        TextView sound = createText("SOUND", 10, WHITE, true);
+        TextView sound = createText("◖", 25, WHITE, false);
         sound.setGravity(Gravity.CENTER);
         header.addView(sound, new LinearLayout.LayoutParams(dp(52), dp(50)));
         root.addView(header);
@@ -807,7 +1200,7 @@ public class MainActivity extends Activity {
         LinearLayout scoreCard = roundedCard(Color.rgb(10, 20, 31), 11);
         scoreCard.setOrientation(LinearLayout.VERTICAL);
         scoreCard.setGravity(Gravity.CENTER);
-        scoreCard.addView(createText("SCORE", 9, GRAY, true));
+        scoreCard.addView(createText("• SCORE", 9, GRAY, true));
         scoreText = createText("0", 22, YELLOW, true);
         scoreCard.addView(scoreText);
         info.addView(scoreCard, new LinearLayout.LayoutParams(0, dp(66), 1));
@@ -815,7 +1208,7 @@ public class MainActivity extends Activity {
         LinearLayout timeCard = roundedCard(Color.rgb(10, 20, 31), 11);
         timeCard.setOrientation(LinearLayout.VERTICAL);
         timeCard.setGravity(Gravity.CENTER);
-        timeCard.addView(createText("TIME", 9, GRAY, true));
+        timeCard.addView(createText("• TIME", 9, GRAY, true));
         timerText = createText("30", 22, RED, true);
         timeCard.addView(timerText);
         LinearLayout.LayoutParams timeParams = new LinearLayout.LayoutParams(0, dp(66), 1);
@@ -825,7 +1218,7 @@ public class MainActivity extends Activity {
         LinearLayout bestCard = roundedCard(Color.rgb(10, 20, 31), 11);
         bestCard.setOrientation(LinearLayout.VERTICAL);
         bestCard.setGravity(Gravity.CENTER);
-        bestCard.addView(createText("BEST", 9, GRAY, true));
+        bestCard.addView(createText("• BEST", 9, GRAY, true));
         bestText = createText(String.valueOf(bestScore), 22, GREEN, true);
         bestCard.addView(bestText);
         info.addView(bestCard, new LinearLayout.LayoutParams(0, dp(66), 1));
@@ -835,7 +1228,7 @@ public class MainActivity extends Activity {
         gameCard.setOrientation(LinearLayout.VERTICAL);
         gameCard.setPadding(dp(7), dp(8), dp(7), dp(8));
 
-        TextView balance = createText("BALANCE: " + totalCoins, 18, YELLOW, true);
+        TextView balance = createText("🪙  " + totalCoins, 22, YELLOW, true);
         gameCard.addView(balance, new LinearLayout.LayoutParams(-1, dp(44)));
 
         FrameLayout arena = new FrameLayout(this);
@@ -859,18 +1252,18 @@ public class MainActivity extends Activity {
                 updateScore();
                 int index = event.getActionIndex();
                 showFlyingCoin(arena, event.getX(index), event.getY(index));
-                if (event.getPointerCount() >= 4 && messageText != null) messageText.setText("4X MULTI-TOUCH | +1 EACH");
+                if (event.getPointerCount() >= 4 && messageText != null) messageText.setText("4X MULTI-TOUCH  •  +1 EACH");
             }
             return true;
         });
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.VERTICAL);
-        messageText = createText("TAP | COLLECT | RUSH!", 12, GRAY, true);
+        messageText = createText("TAP  •  COLLECT  •  RUSH!", 12, GRAY, true);
         bottom.addView(messageText);
         LinearLayout buttons = new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
-        rewardButton = createCompactButton("WATCH AD | 2X", GREEN);
+        rewardButton = createCompactButton("WATCH AD  •  2X", GREEN);
         rewardButton.setVisibility(View.GONE);
         restartButton = createCompactButton("PLAY AGAIN", RED);
         restartButton.setVisibility(View.GONE);
@@ -895,7 +1288,7 @@ public class MainActivity extends Activity {
         LinearLayout card = roundedCard(Color.rgb(10, 20, 31), 11);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        TextView l = createText(label, 9, GRAY, true);
+        TextView l = createText("• " + label, 9, GRAY, true);
         TextView v = createText(value, 22, color, true);
         card.addView(l); card.addView(v);
         return card;
@@ -1247,20 +1640,16 @@ public class MainActivity extends Activity {
             );
         }
 
-        // Save best score locally immediately and also persist it to the
-        // authenticated cloud account. The backend /score endpoint uses
-        // GREATEST(), so an old score can never overwrite a newer best.
         if (coins > bestScore) {
+
             bestScore = coins;
-        }
 
-        prefs.edit()
-                .putInt("bestScore", bestScore)
-                .putInt("totalGames", totalGames)
-                .apply();
-
-        if (authReady && !prefs.getString("authToken", "").isEmpty() && coins > 0) {
-            saveBestScoreToServer(coins);
+            prefs.edit()
+                    .putInt(
+                            "bestScore",
+                            bestScore
+                    )
+                    .apply();
         }
 
         if (coins > 0) {
@@ -1274,34 +1663,7 @@ public class MainActivity extends Activity {
                     ).show();
                     return;
                 }
-                if (newBalance < 0) {
-                    Toast.makeText(
-                            this,
-                            "Game reward response me balance nahi mila. Refresh Balance dabayein.",
-                            Toast.LENGTH_LONG
-                    ).show();
-                    syncAccountNow();
-                    return;
-                }
-
-                // Server already added the reward. Use its returned balance immediately.
-                totalCoins = newBalance;
-                prefs.edit()
-                        .putInt("totalCoins", totalCoins)
-                        .putInt("bestScore", bestScore)
-                        .putInt("totalGames", totalGames)
-                        .apply();
-
-                updateBalanceUI();
-                if (bestText != null) bestText.setText(String.valueOf(bestScore));
-
-                addCoinHistory("+" + roundCoins + " GAME REWARD");
-
-                Toast.makeText(
-                        this,
-                        "+" + roundCoins + " coins added. Balance: " + totalCoins,
-                        Toast.LENGTH_SHORT
-                ).show();
+                totalCoins = newBalance; prefs.edit().putInt("totalCoins", totalCoins).apply(); addCoinHistory("+"+roundCoins+" GAME REWARD"); updateBalanceUI();
             });
         }
 
@@ -1363,7 +1725,7 @@ public class MainActivity extends Activity {
             try {
                 ApiResponse api=postJson("/coins/add","{\"coins\":"+bonus+"}",prefs.getString("authToken",""));
                 String response=api.body;
-                if(api.code>=200 && api.code<300){ int newBalance=parseIntField(response,"balance_coins",totalCoins); mainHandler.post(() -> { coins=coins*2; totalCoins=newBalance; if(coins>bestScore)bestScore=coins; prefs.edit().putInt("bestScore",bestScore).putInt("totalCoins",totalCoins).apply(); saveBestScoreToServer(coins); addCoinHistory("+"+bonus+" AD REWARD"); updateScore();updateBalanceUI();if(bestText!=null)bestText.setText(String.valueOf(bestScore));if(messageText!=null)messageText.setText("REWARD! Coins doubled!");Toast.makeText(this,"+"+bonus+" bonus coins!",Toast.LENGTH_SHORT).show(); }); }
+                if(api.code>=200 && api.code<300){ int newBalance=parseIntField(response,"balance_coins",totalCoins); mainHandler.post(() -> { coins=coins*2; totalCoins=newBalance; if(coins>bestScore)bestScore=coins; prefs.edit().putInt("bestScore",bestScore).putInt("totalCoins",totalCoins).apply(); addCoinHistory("+"+bonus+" AD REWARD"); updateScore();updateBalanceUI();if(bestText!=null)bestText.setText(String.valueOf(bestScore));if(messageText!=null)messageText.setText("REWARD! Coins doubled!");Toast.makeText(this,"+"+bonus+" bonus coins!",Toast.LENGTH_SHORT).show(); }); }
                 else mainHandler.post(() -> Toast.makeText(this,friendlyAuthError(response),Toast.LENGTH_LONG).show());
             } catch(Exception ex){ mainHandler.post(() -> Toast.makeText(this,"Ad reward save nahi hua.",Toast.LENGTH_LONG).show()); }
         }).start();
@@ -1885,10 +2247,6 @@ public class MainActivity extends Activity {
         ApiResponse(int code, String body) { this.code = code; this.body = body; }
     }
 
-    private interface ServerCoinCallback {
-        void onResult(boolean success, int newBalance);
-    }
-
     private String getDeviceIdValue() {
         String id=Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         if(id!=null && id.trim().length()>=6) return id.trim();
@@ -1899,47 +2257,14 @@ public class MainActivity extends Activity {
         return generated;
     }
 
-    private String readResponse(HttpURLConnection connection) throws Exception {
-        InputStream stream = null;
-        try {
-            int code = connection.getResponseCode();
-            stream = (code >= 200 && code < 400)
-                    ? connection.getInputStream()
-                    : connection.getErrorStream();
-
-            if (stream == null) return "";
-
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8)
-            );
-
-            StringBuilder result = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                result.append(line);
-            }
-            reader.close();
-            return result.toString();
-        } finally {
-            if (stream != null) {
-                try {
-                    stream.close();
-                } catch (Exception ignored) {
-                }
-            }
-        }
-    }
-
     private ApiResponse getJson(String path) throws Exception {
         HttpURLConnection c = null;
         try {
             URL url = new URL(API_BASE_URL + path);
             c = (HttpURLConnection) url.openConnection();
             c.setRequestMethod("GET");
-            c.setConnectTimeout(12000);
-            c.setReadTimeout(15000);
-            c.setUseCaches(false);
-            c.setRequestProperty("Accept", "application/json");
+            c.setConnectTimeout(20000);
+            c.setReadTimeout(20000);
             int code = c.getResponseCode();
             return new ApiResponse(code, readResponse(c));
         } finally {
@@ -1950,179 +2275,91 @@ public class MainActivity extends Activity {
     private ApiResponse postJson(String path, String body, String token) throws Exception {
         HttpURLConnection c=null;
         try {
-            URL url=new URL(API_BASE_URL+path); c=(HttpURLConnection)url.openConnection(); c.setRequestMethod("POST"); c.setConnectTimeout(12000); c.setReadTimeout(15000); c.setUseCaches(false); c.setDoOutput(true); c.setRequestProperty("Content-Type","application/json; charset=UTF-8"); c.setRequestProperty("Accept","application/json");
+            URL url=new URL(API_BASE_URL+path); c=(HttpURLConnection)url.openConnection(); c.setRequestMethod("POST"); c.setConnectTimeout(20000); c.setReadTimeout(20000); c.setDoOutput(true); c.setRequestProperty("Content-Type","application/json; charset=UTF-8");
             if(token!=null && !token.isEmpty()) c.setRequestProperty("Authorization","Bearer "+token);
             try(OutputStream os=c.getOutputStream()){os.write(body.getBytes(StandardCharsets.UTF_8));}
             int code=c.getResponseCode(); return new ApiResponse(code, readResponse(c));
         } finally { if(c!=null)c.disconnect(); }
     }
 
-    private void saveBestScoreToServer(int score) {
+    private void addCoinsToServer(int amount, String reason, ServerCoinCallback callback) {
+        if (amount <= 0 || !authReady) {
+            if (callback != null) {
+                mainHandler.post(() -> callback.onResult(false, totalCoins));
+            }
+            return;
+        }
+
+        final long op = ++balanceOperationVersion;
         final String token = prefs.getString("authToken", "");
-        if (token.isEmpty() || score <= 0) return;
 
         new Thread(() -> {
             try {
                 ApiResponse api = postJson(
-                        "/score",
-                        "{\"score\":" + score + "}",
+                        "/coins/add",
+                        "{\"coins\":" + amount + "}",
                         token
                 );
 
+                String response = api.body;
+
                 if (api.code >= 200 && api.code < 300) {
-                    int serverBest = parseIntField(api.body, "best_score", score);
+                    final int balance =
+                            parseIntField(response, "balance_coins", -1);
+
+                    if (balance < 0) {
+                        mainHandler.post(() -> {
+                            if (callback != null) {
+                                callback.onResult(false, totalCoins);
+                            }
+                        });
+                        return;
+                    }
+
                     mainHandler.post(() -> {
-                        if (serverBest > bestScore) bestScore = serverBest;
-                        prefs.edit().putInt("bestScore", bestScore).apply();
-                        if (bestText != null) {
-                            bestText.setText(String.valueOf(bestScore));
+                        if (op != balanceOperationVersion) return;
+
+                        totalCoins = balance;
+
+                        prefs.edit()
+                                .putInt("totalCoins", totalCoins)
+                                .apply();
+
+                        updateBalanceUI();
+
+                        if (callback != null) {
+                            callback.onResult(true, balance);
+                        }
+                    });
+                } else {
+                    mainHandler.post(() -> {
+                        if (callback != null) {
+                            callback.onResult(false, totalCoins);
+                        }
+
+                        if (api.code == 401) {
+                            authReady = false;
+                            syncAccountNow();
                         }
                     });
                 }
-            } catch (Exception ignored) {
-                // Local best score remains saved if the server is temporarily unavailable.
+            } catch (Exception ex) {
+                mainHandler.post(() -> {
+                    if (callback != null) {
+                        callback.onResult(false, totalCoins);
+                    }
+                });
             }
         }).start();
     }
 
-    private void addCoinsToServer(int amount, String reason, ServerCoinCallback callback) {
-    if (amount <= 0) {
-        if (callback != null) {
-            mainHandler.post(() -> callback.onResult(false, totalCoins));
-        }
-        return;
+    private interface ServerCoinCallback { void onResult(boolean success, int newBalance); }
+
+    private String readResponse(HttpURLConnection c) throws Exception {
+        InputStream stream=c.getResponseCode()>=400?c.getErrorStream():c.getInputStream(); if(stream==null)return ""; StringBuilder out=new StringBuilder(); try(BufferedReader r=new BufferedReader(new InputStreamReader(stream,StandardCharsets.UTF_8))){String line;while((line=r.readLine())!=null)out.append(line);} return out.toString();
     }
 
-    if (!authReady || prefs.getString("authToken", "").isEmpty()) {
-        if (callback != null) {
-            mainHandler.post(() -> callback.onResult(false, totalCoins));
-        }
-        syncAccountNow();
-        return;
-    }
-
-    final String token = prefs.getString("authToken", "");
-
-    new Thread(() -> {
-        try {
-            ApiResponse api = postJson(
-                    "/coins/add",
-                    "{\"coins\":" + amount + "}",
-                    token
-            );
-
-            if (api.code >= 200 && api.code < 300) {
-
-                int serverBalance = parseIntField(
-                        api.body,
-                        "balance_coins",
-                        -1
-                );
-
-                if (serverBalance < 0) {
-                    try {
-                        ApiResponse me = postJson(
-                                "/auth/me",
-                                "{}",
-                                token
-                        );
-
-                        if (me.code >= 200 && me.code < 300) {
-                            serverBalance = parseIntField(
-                                    me.body,
-                                    "balance_coins",
-                                    -1
-                            );
-                        }
-                    } catch (Exception ignored) {
-                    }
-                }
-
-                final int finalBalance = serverBalance;
-
-                mainHandler.post(() -> {
-
-                    if (finalBalance < 0) {
-                        if (callback != null) {
-                            callback.onResult(false, totalCoins);
-                        }
-                        return;
-                    }
-
-                    totalCoins = finalBalance;
-
-                    prefs.edit()
-                            .putInt("totalCoins", totalCoins)
-                            .apply();
-
-                    updateBalanceUI();
-
-                    if (callback != null) {
-                        callback.onResult(true, totalCoins);
-                    }
-                });
-
-            } else {
-
-                mainHandler.post(() -> {
-
-                    if (callback != null) {
-                        callback.onResult(false, totalCoins);
-                    }
-
-                    if (api.code == 401) {
-                        authReady = false;
-                        syncAccountNow();
-                    }
-                });
-            }
-
-        } catch (Exception ex) {
-
-            mainHandler.post(() -> {
-                if (callback != null) {
-                    callback.onResult(false, totalCoins);
-                }
-            });
-        }
-    }).start();
-    }
-
-    private int parseIntField(String json, String field, int fallback) {
-        try {
-            if (json == null) return fallback;
-            String key = "\"" + field + "\"";
-            int searchFrom = 0;
-
-            while (searchFrom < json.length()) {
-                int k = json.indexOf(key, searchFrom);
-                if (k < 0) return fallback;
-
-                int colon = json.indexOf(':', k + key.length());
-                if (colon < 0) return fallback;
-
-                int i = colon + 1;
-                while (i < json.length() && Character.isWhitespace(json.charAt(i))) i++;
-
-                // Accept both JSON numbers and quoted numeric values.
-                boolean quoted = i < json.length() && json.charAt(i) == '\"';
-                if (quoted) i++;
-
-                int j = i;
-                if (j < json.length() && json.charAt(j) == '-') j++;
-                int digitStart = j;
-                while (j < json.length() && Character.isDigit(json.charAt(j))) j++;
-
-                if (j > digitStart) {
-                    return Integer.parseInt(json.substring(i, j));
-                }
-
-                searchFrom = k + key.length();
-            }
-        } catch (Exception ignored) {
-        }
-        return fallback;
-    }
+    private int parseIntField(String json,String field,int fallback){ try{String key="\""+field+"\"";int k=json.indexOf(key);if(k<0)return fallback;int colon=json.indexOf(':',k+key.length());if(colon<0)return fallback;int i=colon+1;while(i<json.length()&&Character.isWhitespace(json.charAt(i)))i++;int j=i;while(j<json.length()&&(Character.isDigit(json.charAt(j))||json.charAt(j)=='-'))j++;return Integer.parseInt(json.substring(i,j));}catch(Exception e){return fallback;} }
 
     private String parseStringField(String json,String field,String fallback){ try{String key="\""+field+"\"";int k=json.indexOf(key);if(k<0)return fallback;int colon=json.indexOf(':',k+key.length());if(colon<0)return fallback;int i=colon+1;while(i<json.length()&&Character.isWhitespace(json.charAt(i)))i++;if(i>=json.length()||json.charAt(i)!='\"')return fallback;i++;StringBuilder out=new StringBuilder();boolean esc=false;for(;i<json.length();i++){char ch=json.charAt(i);if(esc){out.append(ch);esc=false;}else if(ch=='\\')esc=true;else if(ch=='\"')break;else out.append(ch);}return out.toString();}catch(Exception e){return fallback;} }
 
@@ -2162,18 +2399,11 @@ public class MainActivity extends Activity {
         }
 
         if (totalText != null) {
-            totalText.setText("TOTAL COINS: " + totalCoins);
-        }
-        if (dashboardValueText != null) {
-            dashboardValueText.setText(
-                    "VALUE: " + String.format(Locale.getDefault(), "%.2f", totalCoins / 100.0)
+
+            totalText.setText(
+                    "TOTAL COINS: "
+                            + totalCoins
             );
-        }
-        if (dashboardBestText != null) {
-            dashboardBestText.setText(String.valueOf(bestScore));
-        }
-        if (dashboardGamesText != null) {
-            dashboardGamesText.setText(String.valueOf(totalGames));
         }
     }
 
