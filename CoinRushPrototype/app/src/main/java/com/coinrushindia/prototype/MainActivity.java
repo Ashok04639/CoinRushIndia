@@ -1719,7 +1719,7 @@ public class MainActivity extends Activity {
         void onError(String message);
     }
 
-    private String getDeviceId() {
+    private String getCoinRushDeviceId() {
         String id = Settings.Secure.getString(
                 getContentResolver(),
                 Settings.Secure.ANDROID_ID
@@ -1742,7 +1742,7 @@ public class MainActivity extends Activity {
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-                String body = "{\"device_id\":\"" + jsonEscape(getDeviceId()) + "\"}";
+                String body = "{\"device_id\":\"" + jsonEscape(getCoinRushDeviceId()) + "\"}";
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(body.getBytes(StandardCharsets.UTF_8));
                 }
@@ -1803,7 +1803,7 @@ public class MainActivity extends Activity {
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-                String body = "{\"device_id\":\"" + jsonEscape(getDeviceId()) + "\",\"coins\":" + amount + "}";
+                String body = "{\"device_id\":\"" + jsonEscape(getCoinRushDeviceId()) + "\",\"coins\":" + amount + "}";
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(body.getBytes(StandardCharsets.UTF_8));
                 }
