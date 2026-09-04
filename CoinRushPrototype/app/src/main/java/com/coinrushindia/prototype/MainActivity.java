@@ -71,7 +71,10 @@ public class MainActivity extends Activity {
 
     private static final String API_BASE_URL =
             "https://coinrushindia.onrender.com/api/v1";
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    private final Handler mainHandler =
+            new Handler(Looper.getMainLooper());
+
     private boolean serverSyncReady = false;
 
     private static final String INTERSTITIAL_AD_ID =
@@ -104,6 +107,11 @@ public class MainActivity extends Activity {
         username = prefs.getString("username", "");
         bestScore = prefs.getInt("bestScore", 0);
         totalCoins = prefs.getInt("totalCoins", 0);
+
+        if (prefs.getBoolean("loggedIn", false)
+                && !username.isEmpty()) {
+            syncUserWithServer();
+        }
 
         if (prefs.getBoolean("loggedIn", false)
                 && !username.isEmpty()) {
@@ -746,25 +754,49 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            addCoinsToServer(100, "DAILY BONUS", new ServerCoinCallback() {
-                @Override
-                public void onSuccess(int newBalance) {
-                    totalCoins = newBalance;
-                    prefs.edit()
-                            .putInt("totalCoins", totalCoins)
-                            .putString("lastDailyBonus", currentDate)
-                            .apply();
-                    updateBalanceUI();
-                    addCoinHistory("+100 DAILY BONUS");
-                    dailyBonusButton.setText("DAILY BONUS CLAIMED");
-                    dailyBonusButton.setEnabled(false);
-                    Toast.makeText(MainActivity.this, "+100 coins bonus!", Toast.LENGTH_SHORT).show();
+            dailyBonusButton.setEnabled(false);
+
+            addCoinsToServer(100, "DAILY BONUS", (success, newBalance) -> {
+                if (!success) {
+                    dailyBonusButton.setEnabled(true);
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Bonus save nahi hua. Internet check karo.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
                 }
 
-                @Override
-                public void onError(String message) {
-                    Toast.makeText(MainActivity.this, "Bonus save nahi hua. Internet check karo.", Toast.LENGTH_LONG).show();
-                }
+                totalCoins = newBalance;
+
+                prefs.edit()
+                        .putInt(
+                                "totalCoins",
+                                totalCoins
+                        )
+                        .putString(
+                                "lastDailyBonus",
+                                currentDate
+                        )
+                        .apply();
+
+                updateBalanceUI();
+
+                addCoinHistory(
+                        "+100 DAILY BONUS"
+                );
+
+                dailyBonusButton.setText(
+                        "DAILY BONUS CLAIMED"
+                );
+
+                dailyBonusButton.setEnabled(false);
+
+                Toast.makeText(
+                        MainActivity.this,
+                        "+100 coins bonus!",
+                        Toast.LENGTH_SHORT
+                ).show();
             });
         });
 
@@ -973,7 +1005,6 @@ public class MainActivity extends Activity {
         );
 
         startGame();
-        syncUserWithServer();
 
         getWindow()
                 .getDecorView()
@@ -1106,7 +1137,39 @@ public class MainActivity extends Activity {
         }
 
         if (coins > 0) {
-            addCoinsToServer(coins, "GAME REWARD");
+            final int roundCoins = coins;
+
+            addCoinsToServer(roundCoins, "GAME REWARD", (success, newBalance) -> {
+                if (!success) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Game reward save nahi hua. Internet check karo.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+
+                totalCoins = newBalance;
+
+                prefs.edit()
+                        .putInt(
+                                "totalCoins",
+                                totalCoins
+                        )
+                        .apply();
+
+                addCoinHistory(
+                        "+" + roundCoins + " GAME REWARD"
+                );
+
+                updateBalanceUI();
+
+                if (totalText != null) {
+                    totalText.setText(
+                            "TOTAL COINS: " + totalCoins
+                    );
+                }
+            });
         }
 
         updateScore();
@@ -1171,36 +1234,69 @@ public class MainActivity extends Activity {
         }
 
         int bonus = coins;
+
         coins = coins * 2;
 
         if (coins > bestScore) {
             bestScore = coins;
-            prefs.edit().putInt("bestScore", bestScore).apply();
         }
 
-        updateScore();
-        if (messageText != null) {
-            messageText.setText("SAVING AD REWARD...");
-        }
+        prefs.edit()
+                .putInt(
+                        "bestScore",
+                        bestScore
+                )
+                .apply();
 
-        addCoinsToServer(bonus, "AD REWARD", new ServerCoinCallback() {
-            @Override
-            public void onSuccess(int newBalance) {
-                totalCoins = newBalance;
-                prefs.edit().putInt("totalCoins", totalCoins).apply();
-                addCoinHistory("+" + bonus + " AD REWARD");
-                updateBalanceUI();
-                if (bestText != null) bestText.setText("BEST: " + bestScore);
-                if (totalText != null) totalText.setText("TOTAL COINS: " + totalCoins);
-                if (messageText != null) messageText.setText("REWARD! Coins doubled!");
-                Toast.makeText(MainActivity.this, "+" + bonus + " bonus coins!", Toast.LENGTH_SHORT).show();
+        addCoinsToServer(bonus, "AD REWARD", (success, newBalance) -> {
+            if (!success) {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Ad reward save nahi hua. Internet check karo.",
+                        Toast.LENGTH_LONG
+                ).show();
+                return;
             }
 
-            @Override
-            public void onError(String message) {
-                Toast.makeText(MainActivity.this, "Ad reward save nahi hua.", Toast.LENGTH_LONG).show();
-                if (messageText != null) messageText.setText("REWARD SAVE FAILED");
+            totalCoins = newBalance;
+
+            prefs.edit()
+                    .putInt(
+                            "totalCoins",
+                            totalCoins
+                    )
+                    .apply();
+
+            addCoinHistory(
+                    "+" + bonus + " AD REWARD"
+            );
+
+            updateScore();
+            updateBalanceUI();
+
+            if (bestText != null) {
+                bestText.setText(
+                        "BEST: " + bestScore
+                );
             }
+
+            if (totalText != null) {
+                totalText.setText(
+                        "TOTAL COINS: " + totalCoins
+                );
+            }
+
+            if (messageText != null) {
+                messageText.setText(
+                        "REWARD! Coins doubled!"
+                );
+            }
+
+            Toast.makeText(
+                    MainActivity.this,
+                    "+" + bonus + " bonus coins!",
+                    Toast.LENGTH_SHORT
+            ).show();
         });
     }
 
@@ -1714,147 +1810,223 @@ public class MainActivity extends Activity {
     // BACKEND SYNC
     // =========================================================
 
-    private interface ServerCoinCallback {
-        void onSuccess(int newBalance);
-        void onError(String message);
-    }
-
-    private String getCoinRushDeviceId() {
+    private String getDeviceIdValue() {
         String id = Settings.Secure.getString(
                 getContentResolver(),
                 Settings.Secure.ANDROID_ID
         );
-        if (id == null || id.trim().isEmpty()) {
-            id = "unknown-" + android.os.Build.MODEL + "-" + android.os.Build.VERSION.SDK_INT;
+
+        if (id == null || id.trim().length() < 6) {
+            return "android-" + android.os.Build.SERIAL;
         }
+
         return id.trim();
     }
 
     private void syncUserWithServer() {
+        final String deviceId = getDeviceIdValue();
+
         new Thread(() -> {
             HttpURLConnection connection = null;
+
             try {
                 URL url = new URL(API_BASE_URL + "/user");
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("POST");
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(10000);
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(15000);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-                String body = "{\"device_id\":\"" + jsonEscape(getCoinRushDeviceId()) + "\"}";
+                String body = "{\"device_id\":\"" + jsonEscape(deviceId) + "\"}";
+
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(body.getBytes(StandardCharsets.UTF_8));
                 }
 
+                String response = readResponse(connection);
                 int code = connection.getResponseCode();
-                String response = readResponse(connection, code);
+
                 if (code >= 200 && code < 300) {
-                    int balance = parseIntField(response, "balance_coins", totalCoins);
+                    final int serverBalance = parseIntField(response, "balance_coins", totalCoins);
+                    final int serverBest = parseIntField(response, "best_score", bestScore);
+
                     mainHandler.post(() -> {
-                        totalCoins = balance;
-                        prefs.edit().putInt("totalCoins", totalCoins).apply();
-                        updateBalanceUI();
                         serverSyncReady = true;
+                        totalCoins = serverBalance;
+                        bestScore = serverBest;
+
+                        prefs.edit()
+                                .putInt("totalCoins", totalCoins)
+                                .putInt("bestScore", bestScore)
+                                .apply();
+
+                        updateBalanceUI();
+
+                        if (bestText != null) {
+                            bestText.setText("BEST: " + bestScore);
+                        }
+
+                        if (totalText != null) {
+                            totalText.setText("TOTAL COINS: " + totalCoins);
+                        }
                     });
                 } else {
-                    mainHandler.post(() -> serverSyncReady = false);
+                    mainHandler.post(() -> {
+                        serverSyncReady = false;
+                        Toast.makeText(
+                                MainActivity.this,
+                                "Server sync nahi hua. Internet check karo.",
+                                Toast.LENGTH_LONG
+                        ).show();
+                    });
                 }
             } catch (Exception e) {
-                mainHandler.post(() -> serverSyncReady = false);
+                mainHandler.post(() -> {
+                    serverSyncReady = false;
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Server sync nahi hua. Internet check karo.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                });
             } finally {
-                if (connection != null) connection.disconnect();
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         }).start();
     }
 
-    private void addCoinsToServer(int amount, String reason) {
-        addCoinsToServer(amount, reason, new ServerCoinCallback() {
-            @Override
-            public void onSuccess(int newBalance) {
-                totalCoins = newBalance;
-                prefs.edit().putInt("totalCoins", totalCoins).apply();
-                addCoinHistory("+" + amount + " " + reason);
-                updateBalanceUI();
-                if (totalText != null) totalText.setText("TOTAL COINS: " + totalCoins);
-            }
-
-            @Override
-            public void onError(String message) {
-                Toast.makeText(MainActivity.this, "Coins server par save nahi hue.", Toast.LENGTH_LONG).show();
-            }
-        });
+    private interface ServerCoinCallback {
+        void onResult(boolean success, int newBalance);
     }
 
-    private void addCoinsToServer(int amount, String reason, ServerCoinCallback callback) {
-        if (amount <= 0) {
-            callback.onError("Invalid amount");
-            return;
-        }
+    private void addCoinsToServer(int amount, String reason) {
+        addCoinsToServer(amount, reason, null);
+    }
+
+    private void addCoinsToServer(
+            int amount,
+            String reason,
+            ServerCoinCallback callback) {
+
+        final String deviceId = getDeviceIdValue();
 
         new Thread(() -> {
             HttpURLConnection connection = null;
+
             try {
                 URL url = new URL(API_BASE_URL + "/coins/add");
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("POST");
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(10000);
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(15000);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-                String body = "{\"device_id\":\"" + jsonEscape(getCoinRushDeviceId()) + "\",\"coins\":" + amount + "}";
+                String body = "{\"device_id\":\"" + jsonEscape(deviceId)
+                        + "\",\"coins\":" + amount + "}";
+
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(body.getBytes(StandardCharsets.UTF_8));
                 }
 
+                String response = readResponse(connection);
                 int code = connection.getResponseCode();
-                String response = readResponse(connection, code);
-                if (code >= 200 && code < 300) {
-                    int balance = parseIntField(response, "balance_coins", -1);
-                    if (balance < 0) throw new Exception("Invalid server response");
-                    mainHandler.post(() -> callback.onSuccess(balance));
-                } else {
-                    mainHandler.post(() -> callback.onError("HTTP " + code));
+                boolean success = code >= 200 && code < 300;
+                int newBalance = parseIntField(response, "balance_coins", totalCoins);
+
+                if (callback != null) {
+                    final boolean finalSuccess = success;
+                    final int finalBalance = newBalance;
+                    mainHandler.post(() -> callback.onResult(finalSuccess, finalBalance));
                 }
             } catch (Exception e) {
-                mainHandler.post(() -> callback.onError(e.getMessage() == null ? "Network error" : e.getMessage()));
+                if (callback != null) {
+                    mainHandler.post(() -> callback.onResult(false, totalCoins));
+                }
             } finally {
-                if (connection != null) connection.disconnect();
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         }).start();
     }
 
-    private String readResponse(HttpURLConnection connection, int code) throws Exception {
-        InputStream stream = code >= 400 ? connection.getErrorStream() : connection.getInputStream();
-        if (stream == null) return "";
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            StringBuilder result = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) result.append(line);
-            return result.toString();
+    private String readResponse(HttpURLConnection connection) throws Exception {
+        InputStream stream;
+
+        if (connection.getResponseCode() >= 400) {
+            stream = connection.getErrorStream();
+        } else {
+            stream = connection.getInputStream();
         }
+
+        if (stream == null) {
+            return "";
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                result.append(line);
+            }
+        }
+
+        return result.toString();
     }
 
     private int parseIntField(String json, String field, int fallback) {
         try {
             String key = "\"" + field + "\"";
-            int start = json.indexOf(key);
-            if (start < 0) return fallback;
-            int colon = json.indexOf(':', start + key.length());
-            if (colon < 0) return fallback;
-            int i = colon + 1;
-            while (i < json.length() && Character.isWhitespace(json.charAt(i))) i++;
-            int j = i;
-            while (j < json.length() && Character.isDigit(json.charAt(j))) j++;
-            return Integer.parseInt(json.substring(i, j));
+            int keyIndex = json.indexOf(key);
+
+            if (keyIndex < 0) {
+                return fallback;
+            }
+
+            int colon = json.indexOf(':', keyIndex + key.length());
+
+            if (colon < 0) {
+                return fallback;
+            }
+
+            int start = colon + 1;
+
+            while (start < json.length()
+                    && Character.isWhitespace(json.charAt(start))) {
+                start++;
+            }
+
+            int end = start;
+
+            while (end < json.length()
+                    && (Character.isDigit(json.charAt(end))
+                    || json.charAt(end) == '-')) {
+                end++;
+            }
+
+            return Integer.parseInt(
+                    json.substring(start, end)
+            );
         } catch (Exception e) {
             return fallback;
         }
     }
 
     private String jsonEscape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        if (value == null) {
+            return "";
+        }
+
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
     }
 
     // =========================================================
