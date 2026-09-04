@@ -1455,11 +1455,22 @@ public class MainActivity extends Activity {
                     return;
                 }
 
+                // Server already added the reward. Use its returned balance immediately.
+                totalCoins = newBalance;
+                prefs.edit()
+                        .putInt("totalCoins", totalCoins)
+                        .putInt("bestScore", bestScore)
+                        .putInt("totalGames", totalGames)
+                        .apply();
+
+                updateBalanceUI();
+                if (bestText != null) bestText.setText(String.valueOf(bestScore));
+
                 addCoinHistory("+" + roundCoins + " GAME REWARD");
 
                 Toast.makeText(
                         this,
-                        "+" + roundCoins + " coins added to total balance!",
+                        "+" + roundCoins + " coins added. Balance: " + totalCoins,
                         Toast.LENGTH_SHORT
                 ).show();
             });
