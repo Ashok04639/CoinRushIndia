@@ -601,8 +601,7 @@ public class MainActivity extends Activity {
         crown.setGravity(Gravity.CENTER);
         GradientDrawable crownBg = new GradientDrawable();
         crownBg.setColor(Color.rgb(10, 20, 30));
-        crownBg.setStyle(1);
-        crownBg.setStroke(dp(2), YELLOW);
+        crownBg.setStroke(3, android.graphics.Color.rgb(255, 193, 7));
         crownBg.setCornerRadius(dp(60));
         crown.setBackground(crownBg);
         welcomeCard.addView(crown, new LinearLayout.LayoutParams(dp(70), dp(70)));
@@ -625,7 +624,6 @@ public class MainActivity extends Activity {
         elite.setGravity(Gravity.CENTER);
         GradientDrawable eliteBg = new GradientDrawable();
         eliteBg.setColor(Color.TRANSPARENT);
-        eliteBg.setStyle(1);
         eliteBg.setStroke(dp(2), YELLOW);
         eliteBg.setCornerRadius(dp(14));
         elite.setBackground(eliteBg);
