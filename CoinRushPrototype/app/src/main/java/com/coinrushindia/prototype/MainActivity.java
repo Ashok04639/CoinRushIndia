@@ -39,6 +39,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.UUID;
 
 public class MainActivity extends Activity {
 
@@ -72,14 +73,9 @@ public class MainActivity extends Activity {
     private static final String API_BASE_URL =
             "https://coinrushindia.onrender.com/api/v1";
 
-    private final Handler mainHandler =
-            new Handler(Looper.getMainLooper());
-
-    private boolean serverSyncReady = false;
-
-    // Prevent an older startup/login sync from overwriting a newer coin update.
-    private long syncRequestVersion = 0L;
-    private long balanceUpdateVersion = 0L;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private boolean authReady = false;
+    private long balanceOperationVersion = 0L;
 
     private static final String INTERSTITIAL_AD_ID =
             "ca-app-pub-4590159013838755/9228973931";
@@ -107,30 +103,16 @@ public class MainActivity extends Activity {
 
         MobileAds.initialize(this, initializationStatus -> {});
 
-        prefs = getSharedPreferences(
-                "CoinRushIndia",
-                MODE_PRIVATE
-        );
-
+        prefs = getSharedPreferences("CoinRushIndia", MODE_PRIVATE);
         username = prefs.getString("username", "");
-        bestScore = prefs.getInt("bestScore", 0);
         totalCoins = prefs.getInt("totalCoins", 0);
+        bestScore = prefs.getInt("bestScore", 0);
 
-        String savedPassword = prefs.getString("password", "");
-        boolean explicitlyLoggedOut = prefs.getBoolean("explicitLogout", false);
-
-        // Keep the player logged in across normal app restarts.
-        // Only the LOGOUT button should force the login screen.
-        if (!username.isEmpty()
-                && !savedPassword.isEmpty()
-                && !explicitlyLoggedOut) {
-
-            prefs.edit().putBoolean("loggedIn", true).apply();
-            showGameScreen();
-            syncUserWithServer();
-
+        String token = prefs.getString("authToken", "");
+        if (!token.isEmpty()) {
+            showLoadingScreen();
+            validateSession(token);
         } else {
-
             showLoginScreen();
         }
     }
@@ -276,219 +258,164 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private void showLoginScreen() {
-
         stopTimer();
+        authReady = false;
 
         LinearLayout root = createRoot();
+        root.setPadding(dp(22), dp(30), dp(22), dp(30));
 
-        TextView title = createText(
-                "COIN RUSH INDIA",
-                30,
-                WHITE,
-                true
-        );
-
+        TextView title = createText("COIN RUSH INDIA", 30, WHITE, true);
         root.addView(title);
 
-        TextView brandLine = createText(
-                "TAP • COLLECT • RUSH",
-                12,
-                ORANGE,
-                true
-        );
-        brandLine.setLetterSpacing(0.08f);
-        root.addView(brandLine);
+        TextView brand = createText("TAP • COLLECT • RUSH", 13, ORANGE, true);
+        brand.setLetterSpacing(0.08f);
+        root.addView(brand, marginParams(0, 2, 0, 28));
 
-        TextView subtitle = createText(
-                "LOGIN TO PLAY",
-                15,
-                GRAY,
-                true
-        );
+        TextView subtitle = createText("LOGIN TO PLAY", 16, GRAY, true);
+        root.addView(subtitle, marginParams(0, 0, 0, 18));
 
-        subtitle.setLayoutParams(
-                marginParams(0, 10, 0, 25)
-        );
-
-        root.addView(subtitle);
-
-        EditText usernameInput =
-                createInput("Username");
-
+        EditText usernameInput = createInput("Username");
+        usernameInput.setText(prefs.getString("username", ""));
         root.addView(usernameInput);
 
-        EditText passwordInput =
-                createInput("Password");
-
-        passwordInput.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType
-                        .TYPE_TEXT_VARIATION_PASSWORD
-        );
-
+        EditText passwordInput = createInput("Password");
+        passwordInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         root.addView(passwordInput);
 
-        Button loginButton =
-                createButton("LOGIN", GREEN);
-
+        Button loginButton = createButton("LOGIN", GREEN);
         root.addView(loginButton);
 
-        Button signupButton =
-                createButton(
-                        "CREATE NEW ACCOUNT",
-                        ORANGE
-                );
-
+        Button signupButton = createButton("CREATE NEW ACCOUNT", ORANGE);
         root.addView(signupButton);
 
-        Button resetButton = createButton(
-                "RESET PASSWORD",
-                Color.rgb(95, 105, 125)
-        );
+        Button resetButton = createButton("RESET PASSWORD", Color.rgb(80, 90, 105));
         root.addView(resetButton);
 
-        resetButton.setOnClickListener(v -> showResetPasswordDialog());
+        TextView secure = createText("SECURE ACCOUNT • CLOUD BALANCE", 12, GRAY, false);
+        root.addView(secure, marginParams(0, 18, 0, 0));
 
         loginButton.setOnClickListener(v -> {
-
-            String user =
-                    usernameInput.getText()
-                            .toString()
-                            .trim();
-
-            String pass =
-                    passwordInput.getText()
-                            .toString();
-
+            String user = usernameInput.getText().toString().trim();
+            String pass = passwordInput.getText().toString();
             if (user.isEmpty() || pass.isEmpty()) {
-
-                Toast.makeText(
-                        this,
-                        "Username aur password bharo",
-                        Toast.LENGTH_SHORT
-                ).show();
-
+                Toast.makeText(this, "Username aur password bharo", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            String savedUser =
-                    prefs.getString(
-                            "username",
-                            ""
-                    );
-
-            String savedPassword =
-                    prefs.getString(
-                            "password",
-                            ""
-                    );
-
-            String hashedInput = hashPassword(pass);
-
-            // Support both the current SHA-256 password format and any
-            // older local account that may have stored the password directly.
-            boolean passwordMatches =
-                    savedPassword.equals(hashedInput)
-                            || savedPassword.equals(pass);
-
-            if (savedUser.equals(user) && passwordMatches) {
-
-                // Upgrade an older/plain local password to SHA-256 immediately.
-                if (!savedPassword.equals(hashedInput)) {
-                    prefs.edit()
-                            .putString("password", hashedInput)
-                            .apply();
+            loginButton.setEnabled(false);
+            loginButton.setText("CONNECTING...");
+            final String deviceId = getDeviceIdValue();
+            new Thread(() -> {
+                try {
+                    ApiResponse api = postJson("/auth/login",
+                            "{\"username\":\"" + jsonEscape(user) + "\",\"password\":\"" + jsonEscape(pass) + "\",\"device_id\":\"" + jsonEscape(deviceId) + "\"}", null);
+                    int code = api.code;
+                    String response = api.body;
+                    if (code >= 200 && code < 300) {
+                        String token = parseStringField(response, "token", "");
+                        int balance = parseIntField(response, "balance_coins", 0);
+                        int best = parseIntField(response, "best_score", 0);
+                        boolean claimed = parseBooleanField(response, "daily_bonus_claimed_today", false);
+                        mainHandler.post(() -> completeLogin(user, token, balance, best, claimed));
+                    } else {
+                        mainHandler.post(() -> { loginButton.setEnabled(true); loginButton.setText("LOGIN"); Toast.makeText(this, friendlyAuthError(response), Toast.LENGTH_LONG).show(); });
+                    }
+                } catch (Exception ex) {
+                    mainHandler.post(() -> { loginButton.setEnabled(true); loginButton.setText("LOGIN"); Toast.makeText(this, "Server se connection nahi hua. Internet check karo.", Toast.LENGTH_LONG).show(); });
                 }
-
-                prefs.edit()
-                        .putBoolean("loggedIn", true)
-                        .putBoolean("explicitLogout", false)
-                        .apply();
-
-                username = user;
-
-                totalCoins =
-                        prefs.getInt(
-                                "totalCoins",
-                                0
-                        );
-
-                bestScore =
-                        prefs.getInt(
-                                "bestScore",
-                                0
-                        );
-
-                showGameScreen();
-                syncUserWithServer();
-
-            } else {
-
-                Toast.makeText(
-                        this,
-                        "Username ya password galat hai",
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
+            }).start();
         });
 
-        signupButton.setOnClickListener(
-                v -> showSignupScreen()
-        );
+        signupButton.setOnClickListener(v -> showSignupScreen());
+        resetButton.setOnClickListener(v -> showResetPasswordDialog());
 
         setContentView(wrapScroll(root));
     }
 
+    private void completeLogin(String user, String token, int balance, int best, boolean dailyClaimed) {
+        if (token.isEmpty()) {
+            showLoginScreen();
+            Toast.makeText(this, "Login response invalid hai.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        username = user;
+        totalCoins = balance;
+        bestScore = best;
+        authReady = true;
+        prefs.edit().putString("username", user).putString("authToken", token)
+                .putBoolean("loggedIn", true).putBoolean("explicitLogout", false)
+                .putInt("totalCoins", balance).putInt("bestScore", best)
+                .putString("lastDailyBonus", dailyClaimed ? new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date()) : "")
+                .apply();
+        showGameScreen();
+        Toast.makeText(this, "Welcome, " + user + "!", Toast.LENGTH_SHORT).show();
+    }
+
     private void showResetPasswordDialog() {
         final EditText newPassword = createInput("New Password");
-        newPassword.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
-
+        newPassword.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         final EditText confirmPassword = createInput("Confirm New Password");
-        confirmPassword.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        );
-
+        confirmPassword.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(20), dp(5), dp(20), 0);
-        box.addView(newPassword);
-        box.addView(confirmPassword);
-
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("RESET PASSWORD")
-                .setMessage("Set a new password for your saved account.")
-                .setView(box)
-                .setNegativeButton("CANCEL", null)
+        box.addView(newPassword); box.addView(confirmPassword);
+        new android.app.AlertDialog.Builder(this).setTitle("RESET PASSWORD")
+                .setMessage("Username enter karke isi device par naya password set karein.")
+                .setView(box).setNegativeButton("CANCEL", null)
                 .setPositiveButton("SAVE", (dialog, which) -> {
-                    String user = prefs.getString("username", "");
+                    String user = prefs.getString("username", "").trim();
                     String pass = newPassword.getText().toString();
                     String confirm = confirmPassword.getText().toString();
+                    if (user.isEmpty()) { Toast.makeText(this, "Username pehle enter/save karein.", Toast.LENGTH_LONG).show(); return; }
+                    if (pass.length() < 4 || !pass.equals(confirm)) { Toast.makeText(this, "Password minimum 4 characters aur same hona chahiye.", Toast.LENGTH_LONG).show(); return; }
+                    final String deviceId = getDeviceIdValue();
+                    new Thread(() -> {
+                        try {
+                            ApiResponse api = postJson("/auth/reset", "{\"username\":\"" + jsonEscape(user) + "\",\"new_password\":\"" + jsonEscape(pass) + "\",\"device_id\":\"" + jsonEscape(deviceId) + "\"}", null);
+                            String response = api.body;
+                            if (api.code >= 200 && api.code < 300) {
+                                String token = parseStringField(response, "token", "");
+                                int balance = parseIntField(response, "balance_coins", 0);
+                                int best = parseIntField(response, "best_score", 0);
+                                boolean claimed = parseBooleanField(response, "daily_bonus_claimed_today", false);
+                                mainHandler.post(() -> completeLogin(user, token, balance, best, claimed));
+                            } else {
+                                mainHandler.post(() -> Toast.makeText(this, friendlyAuthError(response), Toast.LENGTH_LONG).show());
+                            }
+                        } catch (Exception ex) { mainHandler.post(() -> Toast.makeText(this, "Server se connection nahi hua.", Toast.LENGTH_LONG).show()); }
+                    }).start();
+                }).show();
+    }
 
-                    if (user.isEmpty()) {
-                        Toast.makeText(this, "Pehle account create karo.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    if (pass.length() < 4 || !pass.equals(confirm)) {
-                        Toast.makeText(this, "Password minimum 4 characters aur same hona chahiye.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
+    private void showLoadingScreen() {
+        LinearLayout root = createRoot();
+        root.setGravity(Gravity.CENTER);
+        TextView title = createText("COIN RUSH INDIA", 30, WHITE, true);
+        root.addView(title);
+        root.addView(createText("SECURELY CONNECTING...", 14, ORANGE, true), marginParams(0, 12, 0, 0));
+        setContentView(root);
+    }
 
-                    prefs.edit()
-                            .putString("password", hashPassword(pass))
-                            .putBoolean("loggedIn", true)
-                            .putBoolean("explicitLogout", false)
-                            .apply();
-
-                    username = user;
-                    showGameScreen();
-                    syncUserWithServer();
-                    Toast.makeText(this, "Password reset ho gaya.", Toast.LENGTH_SHORT).show();
-                })
-                .show();
+    private void validateSession(String token) {
+        new Thread(() -> {
+            try {
+                ApiResponse api = postJson("/auth/me", "{}", token);
+                String response = api.body;
+                if (api.code >= 200 && api.code < 300) {
+                    String user = parseStringField(response, "username", "");
+                    int balance = parseIntField(response, "balance_coins", 0);
+                    int best = parseIntField(response, "best_score", 0);
+                    boolean claimed = parseBooleanField(response, "daily_bonus_claimed_today", false);
+                    mainHandler.post(() -> { username = user; totalCoins = balance; bestScore = best; authReady = true; prefs.edit().putString("username", user).putInt("totalCoins", balance).putInt("bestScore", best)
+                            .putString("lastDailyBonus", claimed ? new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date()) : "")
+                            .putBoolean("loggedIn", true).apply(); showGameScreen(); });
+                } else {
+                    mainHandler.post(() -> { prefs.edit().remove("authToken").putBoolean("loggedIn", false).apply(); showLoginScreen(); });
+                }
+            } catch (Exception ex) {
+                mainHandler.post(() -> { prefs.edit().remove("authToken").apply(); showLoginScreen(); Toast.makeText(this, "Session verify nahi hui. Dobara login karein.", Toast.LENGTH_LONG).show(); });
+            }
+        }).start();
     }
 
     // =========================================================
@@ -496,190 +423,30 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private void showSignupScreen() {
-
         stopTimer();
-
         LinearLayout root = createRoot();
-
-        TextView title = createText(
-                "COIN RUSH INDIA",
-                30,
-                WHITE,
-                true
-        );
-
-        root.addView(title);
-
-        TextView subtitle = createText(
-                "CREATE YOUR ACCOUNT",
-                15,
-                GRAY,
-                true
-        );
-
-        subtitle.setLayoutParams(
-                marginParams(0, 10, 0, 25)
-        );
-
-        root.addView(subtitle);
-
-        EditText usernameInput =
-                createInput("Choose Username");
-
-        root.addView(usernameInput);
-
-        EditText passwordInput =
-                createInput("Choose Password");
-
-        passwordInput.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType
-                        .TYPE_TEXT_VARIATION_PASSWORD
-        );
-
-        root.addView(passwordInput);
-
-        EditText confirmInput =
-                createInput("Confirm Password");
-
-        confirmInput.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType
-                        .TYPE_TEXT_VARIATION_PASSWORD
-        );
-
-        root.addView(confirmInput);
-
-        Button createButton =
-                createButton(
-                        "CREATE ACCOUNT",
-                        GREEN
-                );
-
-        root.addView(createButton);
-
-        Button backButton =
-                createButton(
-                        "BACK TO LOGIN",
-                        GRAY
-                );
-
-        root.addView(backButton);
-
+        TextView title = createText("COIN RUSH INDIA", 30, WHITE, true); root.addView(title);
+        root.addView(createText("CREATE YOUR ACCOUNT", 16, ORANGE, true), marginParams(0, 5, 0, 22));
+        EditText usernameInput = createInput("Choose Username"); root.addView(usernameInput);
+        EditText passwordInput = createInput("Choose Password"); passwordInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD); root.addView(passwordInput);
+        EditText confirmInput = createInput("Confirm Password"); confirmInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD); root.addView(confirmInput);
+        Button createButton = createButton("CREATE ACCOUNT", GREEN); root.addView(createButton);
+        Button backButton = createButton("BACK TO LOGIN", Color.rgb(80,90,105)); root.addView(backButton);
         createButton.setOnClickListener(v -> {
-
-            String user =
-                    usernameInput.getText()
-                            .toString()
-                            .trim();
-
-            String pass =
-                    passwordInput.getText()
-                            .toString();
-
-            String confirm =
-                    confirmInput.getText()
-                            .toString();
-
-            if (user.isEmpty()
-                    || pass.isEmpty()
-                    || confirm.isEmpty()) {
-
-                Toast.makeText(
-                        this,
-                        "Sabhi details bharo",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                return;
-            }
-
-            if (user.length() < 3) {
-
-                Toast.makeText(
-                        this,
-                        "Username kam se kam 3 characters ka ho",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                return;
-            }
-
-            if (pass.length() < 4) {
-
-                Toast.makeText(
-                        this,
-                        "Password kam se kam 4 characters ka ho",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                return;
-            }
-
-            if (!pass.equals(confirm)) {
-
-                Toast.makeText(
-                        this,
-                        "Passwords match nahi kar rahe",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                return;
-            }
-
-            if (!prefs.getString(
-                    "username",
-                    ""
-            ).isEmpty()) {
-
-                Toast.makeText(
-                        this,
-                        "Account already bana hua hai",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                return;
-            }
-
-            prefs.edit()
-                    .putString(
-                            "username",
-                            user
-                    )
-                    .putString(
-                            "password",
-                            hashPassword(pass)
-                    )
-                    .putBoolean(
-                            "loggedIn",
-                            true
-                    )
-                    .putBoolean(
-                            "explicitLogout",
-                            false
-                    )
-                    .putInt(
-                            "bestScore",
-                            0
-                    )
-                    .putInt(
-                            "totalCoins",
-                            0
-                    )
-                    .apply();
-
-            username = user;
-            bestScore = 0;
-            totalCoins = 0;
-
-            showGameScreen();
-            syncUserWithServer();
+            String user=usernameInput.getText().toString().trim(); String pass=passwordInput.getText().toString(); String confirm=confirmInput.getText().toString();
+            if(user.length()<3 || pass.length()<4 || !pass.equals(confirm)){ Toast.makeText(this,"Username 3+ aur password 4+ characters, passwords same hone chahiye.",Toast.LENGTH_LONG).show(); return; }
+            createButton.setEnabled(false); createButton.setText("CREATING...");
+            final String deviceId=getDeviceIdValue();
+            new Thread(() -> {
+                try {
+                    ApiResponse api=postJson("/auth/register","{\"username\":\""+jsonEscape(user)+"\",\"password\":\""+jsonEscape(pass)+"\",\"device_id\":\""+jsonEscape(deviceId)+"\"}",null);
+                    String response=api.body;
+                    if(api.code>=200 && api.code<300){ String token=parseStringField(response,"token",""); int balance=parseIntField(response,"balance_coins",0); int best=parseIntField(response,"best_score",0); boolean claimed=parseBooleanField(response,"daily_bonus_claimed_today",false); mainHandler.post(() -> completeLogin(user,token,balance,best,claimed)); }
+                    else mainHandler.post(() -> {createButton.setEnabled(true);createButton.setText("CREATE ACCOUNT");Toast.makeText(this,friendlyAuthError(response),Toast.LENGTH_LONG).show();});
+                } catch(Exception ex){ mainHandler.post(() -> {createButton.setEnabled(true);createButton.setText("CREATE ACCOUNT");Toast.makeText(this,"Server se connection nahi hua.",Toast.LENGTH_LONG).show();}); }
+            }).start();
         });
-
-        backButton.setOnClickListener(
-                v -> showLoginScreen()
-        );
-
+        backButton.setOnClickListener(v -> showLoginScreen());
         setContentView(wrapScroll(root));
     }
 
@@ -719,7 +486,7 @@ public class MainActivity extends Activity {
 
         TextView title = createText(
                 "COIN RUSH INDIA",
-                25,
+                22,
                 WHITE,
                 true
         );
@@ -742,21 +509,15 @@ public class MainActivity extends Activity {
         topRow.addView(
                 logoutButton,
                 new LinearLayout.LayoutParams(
-                        dp(100),
-                        dp(50)
+                        dp(92),
+                        dp(48)
                 )
         );
 
         root.addView(topRow);
-
-        TextView brandLine = createText(
-                "TAP • COLLECT • RUSH",
-                11,
-                ORANGE,
-                true
-        );
-        brandLine.setLetterSpacing(0.08f);
-        root.addView(brandLine);
+        TextView brandLine = createText("TAP • COLLECT • RUSH", 12, ORANGE, true);
+        brandLine.setLetterSpacing(0.06f);
+        root.addView(brandLine, marginParams(0, 0, 0, 8));
 
         TextView playerText =
                 createText(
@@ -803,106 +564,24 @@ public class MainActivity extends Activity {
         });
 
         // DAILY BONUS
-        Button dailyBonusButton =
-                createButton(
-                        "DAILY BONUS +100 COINS",
-                        ORANGE
-                );
-
+        Button dailyBonusButton = createButton("DAILY BONUS +100 COINS", ORANGE);
         root.addView(dailyBonusButton);
-
-        String today =
-                new SimpleDateFormat(
-                        "yyyyMMdd",
-                        Locale.getDefault()
-                ).format(new Date());
-
-        String lastBonusDate =
-                prefs.getString(
-                        "lastDailyBonus",
-                        ""
-                );
-
-        if (today.equals(lastBonusDate)) {
-
-            dailyBonusButton.setText(
-                    "DAILY BONUS CLAIMED"
-            );
-
-            dailyBonusButton.setEnabled(false);
-        }
-
+        String today = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        String lastBonusDate = prefs.getString("lastDailyBonus", "");
+        if (today.equals(lastBonusDate)) { dailyBonusButton.setText("DAILY BONUS CLAIMED"); dailyBonusButton.setEnabled(false); }
         dailyBonusButton.setOnClickListener(v -> {
-
-            String currentDate =
-                    new SimpleDateFormat(
-                            "yyyyMMdd",
-                            Locale.getDefault()
-                    ).format(new Date());
-
-            String savedDate =
-                    prefs.getString(
-                            "lastDailyBonus",
-                            ""
-                    );
-
-            if (currentDate.equals(savedDate)) {
-
-                Toast.makeText(
-                        this,
-                        "Aaj ka bonus already claim ho chuka hai.",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                return;
-            }
-
-            dailyBonusButton.setEnabled(false);
-            dailyBonusButton.setText("SAVING BONUS...");
-
-            addCoinsToServer(100, "DAILY BONUS", (success, newBalance) -> {
-                if (!success) {
-                    dailyBonusButton.setEnabled(true);
-                    dailyBonusButton.setText("DAILY BONUS +100 COINS");
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Bonus save nahi hua. Internet check karo.",
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                totalCoins = newBalance;
-
-                prefs.edit()
-                        .putInt(
-                                "totalCoins",
-                                totalCoins
-                        )
-                        .putString(
-                                "lastDailyBonus",
-                                currentDate
-                        )
-                        .apply();
-
-                updateBalanceUI();
-
-                addCoinHistory(
-                        "+100 DAILY BONUS"
-                );
-
-                dailyBonusButton.setText(
-                        "DAILY BONUS CLAIMED"
-                );
-
-                dailyBonusButton.setEnabled(false);
-
-                Toast.makeText(
-                        MainActivity.this,
-                        "+100 coins bonus!",
-                        Toast.LENGTH_SHORT
-                ).show();
-            });
+            if (!authReady || prefs.getString("authToken", "").isEmpty()) { Toast.makeText(this,"Account server se connect ho raha hai. 2 second baad try karein.",Toast.LENGTH_SHORT).show(); return; }
+            String currentDate = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+            if (currentDate.equals(prefs.getString("lastDailyBonus", ""))) { dailyBonusButton.setEnabled(false); return; }
+            dailyBonusButton.setEnabled(false); dailyBonusButton.setText("SAVING BONUS...");
+            new Thread(() -> {
+                try {
+                    ApiResponse api=postJson("/bonus/daily","{}",prefs.getString("authToken",""));
+                    String response=api.body;
+                    if(api.code>=200 && api.code<300){ int newBalance=parseIntField(response,"balance_coins",totalCoins); mainHandler.post(() -> { totalCoins=newBalance; prefs.edit().putInt("totalCoins",totalCoins).putString("lastDailyBonus",currentDate).apply(); updateBalanceUI(); addCoinHistory("+100 DAILY BONUS"); dailyBonusButton.setText("DAILY BONUS CLAIMED"); dailyBonusButton.setEnabled(false); Toast.makeText(this,"+100 coins bonus!",Toast.LENGTH_SHORT).show(); }); }
+                    else mainHandler.post(() -> {dailyBonusButton.setEnabled(true);dailyBonusButton.setText("DAILY BONUS +100 COINS");Toast.makeText(this,friendlyAuthError(response),Toast.LENGTH_LONG).show();});
+                } catch(Exception ex){ mainHandler.post(() -> {dailyBonusButton.setEnabled(true);dailyBonusButton.setText("DAILY BONUS +100 COINS");Toast.makeText(this,"Bonus save nahi hua. Internet check karo.",Toast.LENGTH_LONG).show();}); }
+            }).start();
         });
 
         // HISTORY
@@ -980,11 +659,13 @@ public class MainActivity extends Activity {
                         false
                 );
 
+        scoreCard.addView(totalText);
+
         root.addView(
                 scoreCard,
                 new LinearLayout.LayoutParams(
                         -1,
-                        dp(112)
+                        dp(130)
                 )
         );
 
@@ -1022,8 +703,8 @@ public class MainActivity extends Activity {
 
         LinearLayout.LayoutParams tapParams =
                 new LinearLayout.LayoutParams(
-                        dp(235),
-                        dp(235)
+                        dp(280),
+                        dp(280)
                 );
 
         tapParams.gravity =
@@ -1091,13 +772,9 @@ public class MainActivity extends Activity {
 
             stopTimer();
 
-            prefs.edit()
-                    .putBoolean("loggedIn", false)
-                    .putBoolean("explicitLogout", true)
-                    .apply();
-
-            username = "";
-
+            prefs.edit().remove("authToken").putBoolean("loggedIn", false).putBoolean("explicitLogout", true).apply();
+            authReady = false;
+            stopTimer();
             showLoginScreen();
         });
 
@@ -1239,37 +916,9 @@ public class MainActivity extends Activity {
 
         if (coins > 0) {
             final int roundCoins = coins;
-
             addCoinsToServer(roundCoins, "GAME REWARD", (success, newBalance) -> {
-                if (!success) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Game reward save nahi hua. Internet check karo.",
-                            Toast.LENGTH_LONG
-                    ).show();
-                    return;
-                }
-
-                totalCoins = newBalance;
-
-                prefs.edit()
-                        .putInt(
-                                "totalCoins",
-                                totalCoins
-                        )
-                        .apply();
-
-                addCoinHistory(
-                        "+" + roundCoins + " GAME REWARD"
-                );
-
-                updateBalanceUI();
-
-                if (totalText != null) {
-                    totalText.setText(
-                            "TOTAL COINS: " + totalCoins
-                    );
-                }
+                if (!success) { Toast.makeText(this,"Game reward save nahi hua.",Toast.LENGTH_LONG).show(); return; }
+                totalCoins = newBalance; prefs.edit().putInt("totalCoins", totalCoins).apply(); addCoinHistory("+"+roundCoins+" GAME REWARD"); updateBalanceUI();
             });
         }
 
@@ -1322,83 +971,17 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private void giveDoubleCoins() {
-
-        if (coins <= 0) {
-
-            Toast.makeText(
-                    this,
-                    "Is round me coins nahi mile.",
-                    Toast.LENGTH_SHORT
-            ).show();
-
-            return;
-        }
-
-        int bonus = coins;
-
-        coins = coins * 2;
-
-        if (coins > bestScore) {
-            bestScore = coins;
-        }
-
-        prefs.edit()
-                .putInt(
-                        "bestScore",
-                        bestScore
-                )
-                .apply();
-
-        addCoinsToServer(bonus, "AD REWARD", (success, newBalance) -> {
-            if (!success) {
-                Toast.makeText(
-                        MainActivity.this,
-                        "Ad reward save nahi hua. Internet check karo.",
-                        Toast.LENGTH_LONG
-                ).show();
-                return;
-            }
-
-            totalCoins = newBalance;
-
-            prefs.edit()
-                    .putInt(
-                            "totalCoins",
-                            totalCoins
-                    )
-                    .apply();
-
-            addCoinHistory(
-                    "+" + bonus + " AD REWARD"
-            );
-
-            updateScore();
-            updateBalanceUI();
-
-            if (bestText != null) {
-                bestText.setText(
-                        "BEST: " + bestScore
-                );
-            }
-
-            if (totalText != null) {
-                totalText.setText(
-                        "TOTAL COINS: " + totalCoins
-                );
-            }
-
-            if (messageText != null) {
-                messageText.setText(
-                        "REWARD! Coins doubled!"
-                );
-            }
-
-            Toast.makeText(
-                    MainActivity.this,
-                    "+" + bonus + " bonus coins!",
-                    Toast.LENGTH_SHORT
-            ).show();
-        });
+        if (coins <= 0) { Toast.makeText(this,"Is round me coins nahi mile.",Toast.LENGTH_SHORT).show(); return; }
+        if (!authReady) { Toast.makeText(this,"Account server se connected nahi hai.",Toast.LENGTH_LONG).show(); return; }
+        final int bonus = coins;
+        new Thread(() -> {
+            try {
+                ApiResponse api=postJson("/coins/add","{\"coins\":"+bonus+"}",prefs.getString("authToken",""));
+                String response=api.body;
+                if(api.code>=200 && api.code<300){ int newBalance=parseIntField(response,"balance_coins",totalCoins); mainHandler.post(() -> { coins=coins*2; totalCoins=newBalance; if(coins>bestScore)bestScore=coins; prefs.edit().putInt("bestScore",bestScore).putInt("totalCoins",totalCoins).apply(); addCoinHistory("+"+bonus+" AD REWARD"); updateScore();updateBalanceUI();if(bestText!=null)bestText.setText("BEST: "+bestScore);if(messageText!=null)messageText.setText("REWARD! Coins doubled!");Toast.makeText(this,"+"+bonus+" bonus coins!",Toast.LENGTH_SHORT).show(); }); }
+                else mainHandler.post(() -> Toast.makeText(this,friendlyAuthError(response),Toast.LENGTH_LONG).show());
+            } catch(Exception ex){ mainHandler.post(() -> Toast.makeText(this,"Ad reward save nahi hua.",Toast.LENGTH_LONG).show()); }
+        }).start();
     }
 
     // =========================================================
@@ -1908,282 +1491,71 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // BACKEND SYNC
+    // SERVER API
     // =========================================================
 
+    private static class ApiResponse {
+        final int code;
+        final String body;
+        ApiResponse(int code, String body) { this.code = code; this.body = body; }
+    }
+
     private String getDeviceIdValue() {
-        String id = Settings.Secure.getString(
-                getContentResolver(),
-                Settings.Secure.ANDROID_ID
-        );
-
-        if (id == null || id.trim().length() < 6) {
-            String saved = prefs.getString("stableDeviceId", "");
-            if (!saved.isEmpty()) {
-                return saved;
-            }
-
-            String generated = "android-" +
-                    java.util.UUID.randomUUID().toString().replace("-", "");
-            prefs.edit().putString("stableDeviceId", generated).apply();
-            return generated;
-        }
-
-        return id.trim();
+        String id=Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        if(id!=null && id.trim().length()>=6) return id.trim();
+        String saved=prefs.getString("stableDeviceId","");
+        if(!saved.isEmpty()) return saved;
+        String generated="android-"+UUID.randomUUID().toString().replace("-","");
+        prefs.edit().putString("stableDeviceId",generated).apply();
+        return generated;
     }
 
-    private void syncUserWithServer() {
-        final String deviceId = getDeviceIdValue();
-        final long requestVersion = ++syncRequestVersion;
-        final long balanceVersionAtStart = balanceUpdateVersion;
+    private ApiResponse postJson(String path, String body, String token) throws Exception {
+        HttpURLConnection c=null;
+        try {
+            URL url=new URL(API_BASE_URL+path); c=(HttpURLConnection)url.openConnection(); c.setRequestMethod("POST"); c.setConnectTimeout(20000); c.setReadTimeout(20000); c.setDoOutput(true); c.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+            if(token!=null && !token.isEmpty()) c.setRequestProperty("Authorization","Bearer "+token);
+            try(OutputStream os=c.getOutputStream()){os.write(body.getBytes(StandardCharsets.UTF_8));}
+            int code=c.getResponseCode(); return new ApiResponse(code, readResponse(c));
+        } finally { if(c!=null)c.disconnect(); }
+    }
 
-        serverSyncReady = false;
-
+    private void addCoinsToServer(int amount, String reason, ServerCoinCallback callback) {
+        if(amount<=0 || !authReady){ if(callback!=null)mainHandler.post(() -> callback.onResult(false,totalCoins)); return; }
+        final long op=++balanceOperationVersion; final String token=prefs.getString("authToken","");
         new Thread(() -> {
-            HttpURLConnection connection = null;
-
             try {
-                URL url = new URL(
-                        API_BASE_URL + "/user/" + deviceId
-                );
-
-                connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setConnectTimeout(30000);
-                connection.setReadTimeout(30000);
-
-                int code = connection.getResponseCode();
-                String response = readResponse(connection);
-
-                if (code >= 200 && code < 300) {
-                    final int serverBalance =
-                            parseIntField(response, "balance_coins", -1);
-                    final int serverBest =
-                            parseIntField(response, "best_score", -1);
-
-                    if (serverBalance < 0 || serverBest < 0) {
-                        throw new Exception("Invalid server balance response");
-                    }
-
-                    mainHandler.post(() -> {
-                        if (requestVersion != syncRequestVersion
-                                || balanceVersionAtStart != balanceUpdateVersion) {
-                            return;
-                        }
-
-                        serverSyncReady = true;
-                        totalCoins = serverBalance;
-                        bestScore = serverBest;
-
-                        prefs.edit()
-                                .putInt("totalCoins", totalCoins)
-                                .putInt("bestScore", bestScore)
-                                .apply();
-
-                        updateBalanceUI();
-
-                        if (bestText != null) {
-                            bestText.setText("BEST: " + bestScore);
-                        }
-                        if (totalText != null) {
-                            totalText.setText("TOTAL COINS: " + totalCoins);
-                        }
-                    });
-                } else {
-                    mainHandler.post(() -> {
-                        if (requestVersion == syncRequestVersion) {
-                            serverSyncReady = false;
-                        }
-                    });
-                }
-            } catch (Exception e) {
-                mainHandler.post(() -> {
-                    if (requestVersion == syncRequestVersion) {
-                        serverSyncReady = false;
-                    }
-                });
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            }
+                ApiResponse api=postJson("/coins/add","{\"coins\":"+amount+"}",token);
+                String response=api.body;
+                if(api.code>=200 && api.code<300){ final int balance=parseIntField(response,"balance_coins",totalCoins); mainHandler.post(() -> { if(op!=balanceOperationVersion)return; totalCoins=balance; prefs.edit().putInt("totalCoins",totalCoins).apply(); updateBalanceUI(); if(callback!=null)callback.onResult(true,balance); }); }
+                else mainHandler.post(() -> {if(callback!=null)callback.onResult(false,totalCoins);});
+            } catch(Exception ex){ mainHandler.post(() -> {if(callback!=null)callback.onResult(false,totalCoins);}); }
         }).start();
     }
 
-    private interface ServerCoinCallback {
-        void onResult(boolean success, int newBalance);
+    private interface ServerCoinCallback { void onResult(boolean success, int newBalance); }
+
+    private String readResponse(HttpURLConnection c) throws Exception {
+        InputStream stream=c.getResponseCode()>=400?c.getErrorStream():c.getInputStream(); if(stream==null)return ""; StringBuilder out=new StringBuilder(); try(BufferedReader r=new BufferedReader(new InputStreamReader(stream,StandardCharsets.UTF_8))){String line;while((line=r.readLine())!=null)out.append(line);} return out.toString();
     }
 
-    private void addCoinsToServer(int amount, String reason) {
-        addCoinsToServer(amount, reason, null);
-    }
+    private int parseIntField(String json,String field,int fallback){ try{String key="\""+field+"\"";int k=json.indexOf(key);if(k<0)return fallback;int colon=json.indexOf(':',k+key.length());if(colon<0)return fallback;int i=colon+1;while(i<json.length()&&Character.isWhitespace(json.charAt(i)))i++;int j=i;while(j<json.length()&&(Character.isDigit(json.charAt(j))||json.charAt(j)=='-'))j++;return Integer.parseInt(json.substring(i,j));}catch(Exception e){return fallback;} }
 
-    private void addCoinsToServer(
-            int amount,
-            String reason,
-            ServerCoinCallback callback) {
+    private String parseStringField(String json,String field,String fallback){ try{String key="\""+field+"\"";int k=json.indexOf(key);if(k<0)return fallback;int colon=json.indexOf(':',k+key.length());if(colon<0)return fallback;int i=colon+1;while(i<json.length()&&Character.isWhitespace(json.charAt(i)))i++;if(i>=json.length()||json.charAt(i)!='\"')return fallback;i++;StringBuilder out=new StringBuilder();boolean esc=false;for(;i<json.length();i++){char ch=json.charAt(i);if(esc){out.append(ch);esc=false;}else if(ch=='\\')esc=true;else if(ch=='\"')break;else out.append(ch);}return out.toString();}catch(Exception e){return fallback;} }
 
-        if (amount <= 0) {
-            if (callback != null) {
-                mainHandler.post(() -> callback.onResult(false, totalCoins));
-            }
-            return;
-        }
-
-        final String deviceId = getDeviceIdValue();
-        balanceUpdateVersion++;
-        syncRequestVersion++;
-
-        new Thread(() -> {
-            HttpURLConnection connection = null;
-            try {
-                // 1) Ensure the player row exists.
-                URL userUrl = new URL(API_BASE_URL + "/user");
-                connection = (HttpURLConnection) userUrl.openConnection();
-                connection.setRequestMethod("POST");
-                connection.setConnectTimeout(30000);
-                connection.setReadTimeout(30000);
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-
-                String userBody = "{\"device_id\":\"" + jsonEscape(deviceId) + "\"}";
-                try (OutputStream os = connection.getOutputStream()) {
-                    os.write(userBody.getBytes(StandardCharsets.UTF_8));
-                }
-
-                int userCode = connection.getResponseCode();
-                String userResponse = readResponse(connection);
-                connection.disconnect();
-                connection = null;
-
-                if (userCode < 200 || userCode >= 300) {
-                    postCoinResult(callback, false, totalCoins);
-                    return;
-                }
-
-                // 2) Add the coins atomically on the server.
-                URL coinUrl = new URL(API_BASE_URL + "/coins/add");
-                connection = (HttpURLConnection) coinUrl.openConnection();
-                connection.setRequestMethod("POST");
-                connection.setConnectTimeout(30000);
-                connection.setReadTimeout(30000);
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-
-                String body = "{\"device_id\":\"" + jsonEscape(deviceId)
-                        + "\",\"coins\":" + amount + "}";
-
-                try (OutputStream os = connection.getOutputStream()) {
-                    os.write(body.getBytes(StandardCharsets.UTF_8));
-                }
-
-                int code = connection.getResponseCode();
-                String response = readResponse(connection);
-                boolean success = code >= 200 && code < 300;
-                int newBalance = parseIntField(response, "balance_coins", totalCoins);
-
-                if (success) {
-                    final int finalBalance = newBalance;
-                    mainHandler.post(() -> {
-                        totalCoins = finalBalance;
-                        prefs.edit().putInt("totalCoins", totalCoins).apply();
-                        updateBalanceUI();
-                    });
-                }
-
-                postCoinResult(callback, success, newBalance);
-
-            } catch (Exception e) {
-                postCoinResult(callback, false, totalCoins);
-            } finally {
-                if (connection != null) connection.disconnect();
-            }
-        }).start();
-    }
-
-    private void postCoinResult(
-            ServerCoinCallback callback,
-            boolean success,
-            int balance) {
-        if (callback != null) {
-            mainHandler.post(() -> callback.onResult(success, balance));
-        }
-    }
-
-    private String readResponse(HttpURLConnection connection) throws Exception {
-        InputStream stream;
-
-        if (connection.getResponseCode() >= 400) {
-            stream = connection.getErrorStream();
-        } else {
-            stream = connection.getInputStream();
-        }
-
-        if (stream == null) {
-            return "";
-        }
-
-        StringBuilder result = new StringBuilder();
-
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                result.append(line);
-            }
-        }
-
-        return result.toString();
-    }
-
-    private int parseIntField(String json, String field, int fallback) {
+    private boolean parseBooleanField(String json, String field, boolean fallback) {
         try {
             String key = "\"" + field + "\"";
-            int keyIndex = json.indexOf(key);
-
-            if (keyIndex < 0) {
-                return fallback;
-            }
-
-            int colon = json.indexOf(':', keyIndex + key.length());
-
-            if (colon < 0) {
-                return fallback;
-            }
-
-            int start = colon + 1;
-
-            while (start < json.length()
-                    && Character.isWhitespace(json.charAt(start))) {
-                start++;
-            }
-
-            int end = start;
-
-            while (end < json.length()
-                    && (Character.isDigit(json.charAt(end))
-                    || json.charAt(end) == '-')) {
-                end++;
-            }
-
-            return Integer.parseInt(
-                    json.substring(start, end)
-            );
-        } catch (Exception e) {
-            return fallback;
-        }
+            int k = json.indexOf(key); if (k < 0) return fallback;
+            int colon = json.indexOf(':', k + key.length()); if (colon < 0) return fallback;
+            String rest = json.substring(colon + 1).trim();
+            if (rest.startsWith("true")) return true;
+            if (rest.startsWith("false")) return false;
+        } catch (Exception ignored) {}
+        return fallback;
     }
 
-    private String jsonEscape(String value) {
-        if (value == null) {
-            return "";
-        }
-
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"");
-    }
+    private String friendlyAuthError(String response){ if(response==null)return "Request failed."; if(response.contains("Invalid username or password"))return "Username ya password galat hai."; if(response.contains("Username already exists"))return "Username already registered hai. Login karein."; if(response.contains("Account not found"))return "Account nahi mila. Pehle account create karein."; if(response.contains("different device"))return "Ye account kisi aur device se linked hai."; if(response.contains("Daily bonus already claimed"))return "Aaj ka bonus already claim ho chuka hai."; return "Request complete nahi hui. Dobara try karein."; }
 
     // =========================================================
     // UI HELPERS
@@ -2233,10 +1605,10 @@ public class MainActivity extends Activity {
         );
 
         root.setPadding(
-                dp(14),
-                dp(12),
-                dp(14),
-                dp(18)
+                dp(18),
+                dp(18),
+                dp(18),
+                dp(25)
         );
 
         root.setBackgroundColor(BG);
