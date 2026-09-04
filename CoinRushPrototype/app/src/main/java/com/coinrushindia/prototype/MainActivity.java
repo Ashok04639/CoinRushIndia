@@ -601,7 +601,7 @@ public class MainActivity extends Activity {
         crown.setGravity(Gravity.CENTER);
         GradientDrawable crownBg = new GradientDrawable();
         crownBg.setColor(Color.rgb(10, 20, 30));
-        crownBg.setStyle(GradientDrawable.STROKE);
+        crownBg.setStyle(1);
         crownBg.setStroke(dp(2), YELLOW);
         crownBg.setCornerRadius(dp(60));
         crown.setBackground(crownBg);
@@ -625,7 +625,7 @@ public class MainActivity extends Activity {
         elite.setGravity(Gravity.CENTER);
         GradientDrawable eliteBg = new GradientDrawable();
         eliteBg.setColor(Color.TRANSPARENT);
-        eliteBg.setStyle(GradientDrawable.STROKE);
+        eliteBg.setStyle(1);
         eliteBg.setStroke(dp(2), YELLOW);
         eliteBg.setCornerRadius(dp(14));
         elite.setBackground(eliteBg);
