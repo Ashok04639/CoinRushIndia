@@ -77,6 +77,10 @@ public class MainActivity extends Activity {
 
     private boolean serverSyncReady = false;
 
+    // Prevent an older startup/login sync from overwriting a newer coin update.
+    private long syncRequestVersion = 0L;
+    private long balanceUpdateVersion = 0L;
+
     private static final String INTERSTITIAL_AD_ID =
             "ca-app-pub-4590159013838755/9228973931";
 
@@ -110,13 +114,10 @@ public class MainActivity extends Activity {
 
         if (prefs.getBoolean("loggedIn", false)
                 && !username.isEmpty()) {
-            syncUserWithServer();
-        }
-
-        if (prefs.getBoolean("loggedIn", false)
-                && !username.isEmpty()) {
 
             showGameScreen();
+            // Sync only after the game screen/views are ready.
+            syncUserWithServer();
 
         } else {
 
@@ -1825,6 +1826,10 @@ public class MainActivity extends Activity {
 
     private void syncUserWithServer() {
         final String deviceId = getDeviceIdValue();
+        final long requestVersion = ++syncRequestVersion;
+        final long balanceVersionAtStart = balanceUpdateVersion;
+
+        serverSyncReady = false;
 
         new Thread(() -> {
             HttpURLConnection connection = null;
@@ -1836,22 +1841,36 @@ public class MainActivity extends Activity {
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(15000);
                 connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                connection.setRequestProperty(
+                        "Content-Type",
+                        "application/json; charset=UTF-8"
+                );
 
-                String body = "{\"device_id\":\"" + jsonEscape(deviceId) + "\"}";
+                String body =
+                        "{\"device_id\":\""
+                                + jsonEscape(deviceId)
+                                + "\"}";
 
                 try (OutputStream os = connection.getOutputStream()) {
                     os.write(body.getBytes(StandardCharsets.UTF_8));
                 }
 
-                String response = readResponse(connection);
                 int code = connection.getResponseCode();
+                String response = readResponse(connection);
 
                 if (code >= 200 && code < 300) {
-                    final int serverBalance = parseIntField(response, "balance_coins", totalCoins);
-                    final int serverBest = parseIntField(response, "best_score", bestScore);
+                    final int serverBalance =
+                            parseIntField(response, "balance_coins", totalCoins);
+                    final int serverBest =
+                            parseIntField(response, "best_score", bestScore);
 
                     mainHandler.post(() -> {
+                        // Ignore stale sync responses. A newer coin update is authoritative.
+                        if (requestVersion != syncRequestVersion
+                                || balanceVersionAtStart != balanceUpdateVersion) {
+                            return;
+                        }
+
                         serverSyncReady = true;
                         totalCoins = serverBalance;
                         bestScore = serverBest;
@@ -1868,11 +1887,17 @@ public class MainActivity extends Activity {
                         }
 
                         if (totalText != null) {
-                            totalText.setText("TOTAL COINS: " + totalCoins);
+                            totalText.setText(
+                                    "TOTAL COINS: " + totalCoins
+                            );
                         }
                     });
                 } else {
                     mainHandler.post(() -> {
+                        if (requestVersion != syncRequestVersion) {
+                            return;
+                        }
+
                         serverSyncReady = false;
                         Toast.makeText(
                                 MainActivity.this,
@@ -1883,6 +1908,10 @@ public class MainActivity extends Activity {
                 }
             } catch (Exception e) {
                 mainHandler.post(() -> {
+                    if (requestVersion != syncRequestVersion) {
+                        return;
+                    }
+
                     serverSyncReady = false;
                     Toast.makeText(
                             MainActivity.this,
@@ -1913,6 +1942,11 @@ public class MainActivity extends Activity {
 
         final String deviceId = getDeviceIdValue();
 
+        // This coin operation becomes newer than any in-flight sync response.
+        balanceUpdateVersion++;
+        syncRequestVersion++;
+        serverSyncReady = true;
+
         new Thread(() -> {
             HttpURLConnection connection = null;
 
@@ -1935,7 +1969,15 @@ public class MainActivity extends Activity {
                 String response = readResponse(connection);
                 int code = connection.getResponseCode();
                 boolean success = code >= 200 && code < 300;
-                int newBalance = parseIntField(response, "balance_coins", totalCoins);
+                int newBalance = parseIntField(
+                        response,
+                        "balance_coins",
+                        totalCoins
+                );
+
+                if (success) {
+                    serverSyncReady = true;
+                }
 
                 if (callback != null) {
                     final boolean finalSuccess = success;
